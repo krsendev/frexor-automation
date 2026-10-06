@@ -1,0 +1,40 @@
+# Mapping confirmed against DISC, VAK, IQ, and post-submit UIA control trees.
+discovery_complete = true
+strategy = "ordered_edits"
+
+[submission]
+dialog_title = "Perhatian"
+message_contains = "Hasil Tes sudah disimpan di"
+confirm_button_title = "OK"
+
+[participant]
+name_edit_index = 0
+position_edit_index = 1
+date_edit_index = 2
+
+[DISC]
+navigation_title = "Attitude Test [DISC]"
+entry_title = "Masukkan Hasil Penilaian"
+form_title = "Lembar Jawaban Attitude Test [DISC]"
+question_count = 24
+answers_per_question = 2
+answer_start_index = 3
+submit_title = "Kirim"
+
+[VAK]
+navigation_title = "Working Style Test [VAK]"
+entry_title = "Masukkan Hasil Penilaian"
+form_title = "Lembar Jawaban Working Style Test [VAK]"
+question_count = 30
+answers_per_question = 1
+answer_start_index = 3
+submit_title = "Kirim"
+
+[IQ]
+navigation_title = "Aptitude Test [IQ]"
+entry_title = "Masukkan Hasil Penilaian"
+form_title = "Lembar Jawaban Aptitude Test [IQ]"
+question_count = 60
+answers_per_question = 1
+answer_start_index = 3
+submit_title = "Kirim"

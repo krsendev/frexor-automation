@@ -1,0 +1,54 @@
+[data_source]
+type = "google_sheets" # google_sheets, excel, or api
+
+[frexor]
+adapter = "mock" # Change to "windows" only after UI discovery.
+executable_path = "C:\\Program Files\\Frexor\\Frexor.exe"
+window_title_re = "^Frexor Psychology Assessment System$"
+window_class_name = "GlassWndClass-GlassWindowClass-2"
+startup_timeout_seconds = 30
+action_timeout_seconds = 10
+ui_map_path = "frexor_ui_map.example.toml"
+
+[sheets]
+spreadsheet_id = "replace-me"
+credentials_path = "service-account.json"
+participants_sheet = "Participants"
+disc_sheet = "DISC"
+vak_sheet = "VAK"
+iq_sheet = "IQ"
+
+[excel]
+workbook_path = "assessment-data.xlsx"
+participants_sheet = "Participants"
+disc_sheet = "DISC"
+vak_sheet = "VAK"
+iq_sheet = "IQ"
+
+[api]
+base_url = "http://127.0.0.1:8000"
+token = ""
+timeout_seconds = 30
+
+[processing]
+max_retries = 3
+retry_base_delay_seconds = 1.0
+stop_on_fatal_error = true
+continue_after_participant_error = false
+
+[pdf]
+base_directory = "C:\\Users\\Operator\\Documents\\Frexor PAS"
+output_directory = "output"
+timeout_seconds = 60
+poll_interval_seconds = 0.5
+stable_seconds = 1.0
+minimum_size_bytes = 100
+
+[pdf.module_directories]
+DISC = "DISC"
+VAK = "VAK"
+IQ = "IQ"
+
+[logging]
+level = "INFO"
+directory = "logs"

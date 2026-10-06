@@ -1,0 +1,2 @@
+participant_id,name,position,overall_status,disc_status,vak_status,iq_status,test_date,last_processed_at,last_error,error_code,attempt_count,pdf_status,pdf_path
+P001,Sample User,Operator,READY,READY,READY,READY,2026-10-06,,,,0,PENDING,
