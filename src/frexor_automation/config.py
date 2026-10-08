@@ -42,6 +42,9 @@ class ApiConfig:
     base_url: str
     token: str
     timeout_seconds: float
+    worker_id: str
+    poll_interval_seconds: float
+    heartbeat_interval_seconds: float
 
 
 @dataclass(frozen=True)
@@ -127,6 +130,9 @@ def load_config(path: str | Path) -> AppConfig:
                 base_url=api.get("base_url", "").rstrip("/"),
                 token=api.get("token", ""),
                 timeout_seconds=float(api.get("timeout_seconds", 30)),
+                worker_id=api.get("worker_id", "").strip(),
+                poll_interval_seconds=float(api.get("poll_interval_seconds", 5)),
+                heartbeat_interval_seconds=float(api.get("heartbeat_interval_seconds", 60)),
             ),
             processing=ProcessingConfig(**p),
             pdf=PdfConfig(

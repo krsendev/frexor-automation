@@ -39,7 +39,7 @@ Control tree DISC, VAK, IQ, dialog setelah submit, dan struktur folder PDF sudah
 ```powershell
 py -m venv .venv
 .venv\Scripts\Activate.ps1
-py -m pip install -e .
+py -m pip install -e ".[worker]"
 Copy-Item config.example.toml config.toml
 Copy-Item frexor_ui_map.example.toml frexor_ui_map.toml
 ```
@@ -65,13 +65,18 @@ participant_id,name,position,overall_status,disc_status,vak_status,iq_status,tes
 Gunakan huruf kapital untuk jawaban. Loader juga menormalisasi input menjadi kapital. Status awal peserta baru adalah `READY` untuk overall dan ketiga modul.
 `test_date` wajib berformat `YYYY-MM-DD` dan berisi tanggal peserta mengerjakan tes.
 
-Untuk API, aplikasi mengharapkan endpoint berikut:
+Untuk mode otomatis berbasis API, frontend mengirim assessment ke server queue dan worker Windows memakai endpoint terpisah:
 
 ```text
-GET   /api/v1/automation/participants
-GET   /api/v1/automation/participants/{id}/answers/{module}
-PATCH /api/v1/automation/participants/{id}/modules/{module}
+POST  /api/v1/webhooks/assessments
+GET   /api/v1/jobs/{job_id}
+POST  /api/v1/worker/jobs/claim
+GET   /api/v1/worker/jobs/{job_id}/answers/{module}
+PATCH /api/v1/worker/jobs/{job_id}/modules/{module}
+POST  /api/v1/worker/jobs/{job_id}/heartbeat
 ```
+
+Webhook dan worker memakai bearer token yang berbeda. Token webhook hanya digunakan oleh backend frontend; jangan menaruh token tersebut di JavaScript browser.
 
 Data sintetis untuk controlled integration test tersedia di `.test-data/dummy/`. Jangan gunakan fixture tersebut untuk interpretasi psikologis atau keputusan karyawan.
 
@@ -101,9 +106,20 @@ frexor-automation --config config.toml run
 # Menyertakan modul ERROR untuk retry, tetap melewati DONE.
 frexor-automation --config config.toml retry-errors
 
+# Worker API permanen; claim dan proses satu job pada satu waktu.
+frexor-automation --config config.toml worker
+
 # UI operator.
 frexor-automation --config config.toml ui
 ```
+
+Jalankan API Linux dengan environment variable dari `.env.frexor.example`:
+
+```bash
+frexor-api
+```
+
+Panduan deployment lengkap berada di `docs/PRODUCTION_DEPLOYMENT.md`.
 
 Pada build produksi, operator membuka `Frexor Assessment Automation.exe`. Konfigurasi tersimpan di `%APPDATA%\FrexorAssessmentAutomation` dan setup pertama tampil otomatis.
 

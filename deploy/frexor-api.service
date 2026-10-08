@@ -1,0 +1,19 @@
+[Unit]
+Description=Frexor Assessment Automation API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=frexor
+Group=frexor
+WorkingDirectory=/opt/frexor-automation
+EnvironmentFile=/etc/frexor-automation.env
+ExecStart=/opt/frexor-automation/.venv/bin/frexor-api
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

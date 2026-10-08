@@ -96,6 +96,9 @@ iq_sheet = "IQ"
 base_url = {_quoted(api_base_url)}
 token = {_quoted(api_token)}
 timeout_seconds = 30
+worker_id = "frexor-vm-01"
+poll_interval_seconds = 5
+heartbeat_interval_seconds = 60
 
 [processing]
 max_retries = 3

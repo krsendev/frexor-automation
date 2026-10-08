@@ -12,3 +12,5 @@ logs/
 diagnostics/
 output/
 discovery/
+src/frexor_api/data/
+.env.frexor

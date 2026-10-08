@@ -8,20 +8,27 @@ version = "0.1.0"
 description = "Safe multi-source assessment data automation for Frexor"
 requires-python = ">=3.11"
 dependencies = [
+  "httpx>=0.28,<1",
+]
+
+[project.optional-dependencies]
+api = [
+  "fastapi>=0.115,<0.116",
+  "uvicorn[standard]>=0.34,<1",
+]
+worker = [
   "google-api-python-client>=2.149,<3",
   "google-auth>=2.35,<3",
-  "httpx>=0.28,<1",
   "openpyxl>=3.1,<4",
   "PySide6>=6.8,<7",
   "pywinauto>=0.6.9,<0.7; sys_platform == 'win32'",
   "pywin32>=308; sys_platform == 'win32'",
 ]
-
-[project.optional-dependencies]
 build = ["pyinstaller>=6.11,<7"]
 
 [project.scripts]
 frexor-automation = "frexor_automation.cli:main"
+frexor-api = "frexor_api.run:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

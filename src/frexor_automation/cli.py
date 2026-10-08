@@ -4,6 +4,7 @@ import argparse
 import os
 from pathlib import Path
 import sys
+import time
 
 from .config import load_config
 from .errors import AutomationError
@@ -19,6 +20,7 @@ def parser() -> argparse.ArgumentParser:
     sub.add_parser("validate", help="Validate Sheets data without opening Frexor")
     sub.add_parser("run", help="Process READY/PARTIAL participants")
     sub.add_parser("retry-errors", help="Retry ERROR modules without repeating DONE modules")
+    sub.add_parser("worker", help="Continuously claim and process API jobs")
     sub.add_parser("ui", help="Launch the operator desktop UI")
     return result
 
@@ -60,6 +62,26 @@ def main(argv: list[str] | None = None) -> int:
                 detail = "VALID" if result.valid else "INVALID: " + "; ".join(result.errors)
                 print(f"{result.participant_id} -> {detail}")
             return 0 if all(result.valid for result in results) else 2
+        if args.command == "worker":
+            if config.data_source != "api":
+                raise ValueError("The worker command requires data_source.type = 'api'")
+            print(f"Worker {repository.worker_id} connected to {config.api.base_url}")
+            try:
+                while True:
+                    summary = orchestrator.run_batch()
+                    if summary.total == 0:
+                        time.sleep(config.api.poll_interval_seconds)
+                    else:
+                        print(
+                            f"Job complete: success={summary.success} "
+                            f"failed={summary.failed}"
+                        )
+            except KeyboardInterrupt:
+                print("Worker stopped safely")
+                return 0
+            finally:
+                repository.close()
+
         summary = orchestrator.run_batch(retry_errors=args.command == "retry-errors")
         print(
             f"Batch complete: total={summary.total} success={summary.success} "

@@ -6,6 +6,8 @@ from datetime import date, datetime, timezone
 import os
 from pathlib import Path
 import shutil
+import socket
+from threading import Event, Thread
 from typing import Any
 
 from .config import ApiConfig, ExcelConfig, SheetsConfig
@@ -289,40 +291,144 @@ class ApiRepository(AssessmentRepository):
     def __init__(self, config: ApiConfig):
         if not config.base_url:
             raise ConfigurationError("API base_url is required")
+        if not config.token:
+            raise ConfigurationError("API worker token is required")
         try:
             import httpx
         except ImportError as exc:
             raise ConfigurationError("httpx is required for API data source") from exc
-        headers = {"Authorization": f"Bearer {config.token}"} if config.token else {}
-        self.client = httpx.Client(base_url=config.base_url, headers=headers, timeout=config.timeout_seconds)
+        self.config = config
+        self.worker_id = config.worker_id or socket.gethostname()
+        self.client = httpx.Client(
+            base_url=config.base_url,
+            headers={"Authorization": f"Bearer {config.token}"},
+            timeout=config.timeout_seconds,
+        )
+        self._active_job_id: str | None = None
+        self._heartbeat_stop = Event()
+        self._heartbeat_thread: Thread | None = None
+
+    def _worker_headers(self) -> dict[str, str]:
+        return {"X-Worker-ID": self.worker_id}
 
     @staticmethod
-    def _participant(data: dict) -> Participant:
-        participant_id = str(data["participant_id"])
+    def _status(value: str) -> Status:
+        mapping = {
+            "PENDING": Status.READY,
+            "PROCESSING": Status.PROCESSING,
+            "DONE": Status.DONE,
+            "ERROR": Status.ERROR,
+        }
+        try:
+            return mapping[value]
+        except KeyError as exc:
+            raise ConfigurationError(f"Unknown API module status: {value!r}") from exc
+
+    def _participant(self, data: dict) -> Participant:
+        participant_id = str(data["job_id"])
+        modules = data.get("modules", {})
+        module_statuses = {
+            module: self._status(modules.get(module.value, {}).get("status", "PENDING"))
+            for module in Module
+        }
+        values = set(module_statuses.values())
+        if values == {Status.DONE}:
+            overall_status = Status.DONE
+        elif Status.PROCESSING in values:
+            overall_status = Status.PROCESSING
+        elif Status.DONE in values or Status.ERROR in values:
+            overall_status = Status.PARTIAL
+        else:
+            overall_status = Status.READY
         return Participant(
-            participant_id, str(data["name"]), str(data["position"]), Status(data["overall_status"]),
-            {module: Status(data[f"{module.value.lower()}_status"]) for module in Module},
-            str(data.get("last_error", "")), str(data.get("error_code", "")),
-            int(data.get("attempt_count", 0)), str(data.get("pdf_status", "PENDING")),
-            str(data.get("pdf_path", "")), date.fromisoformat(data["test_date"]),
+            participant_id,
+            str(data["name"]),
+            str(data["position"]),
+            overall_status,
+            module_statuses,
+            attempt_count=int(data.get("attempt_count", 0)),
+            test_date=date.fromisoformat(data["test_date"]),
         )
 
     def list_participants(self, include_errors=False, include_done=False):
-        response = self.client.get("/api/v1/automation/participants", params={"include_errors": include_errors, "include_done": include_done})
+        if self._active_job_id is not None:
+            raise ConfigurationError("Worker still owns an unfinished API job")
+        response = self.client.post(
+            "/api/v1/worker/jobs/claim",
+            json={"worker_id": self.worker_id},
+        )
+        if response.status_code == 204:
+            return []
         response.raise_for_status()
-        return [self._participant(item) for item in response.json()]
+        data = response.json()
+        self._active_job_id = str(data["job_id"])
+        self._start_heartbeat()
+        return [self._participant(data)]
 
     def get_answers(self, participant_id: str, module: Module):
-        response = self.client.get(f"/api/v1/automation/participants/{participant_id}/answers/{module.value}")
+        self._require_active_job(participant_id)
+        response = self.client.get(
+            f"/api/v1/worker/jobs/{participant_id}/answers/{module.value}",
+            headers=self._worker_headers(),
+        )
         response.raise_for_status()
-        rows = response.json()
+        rows = response.json()["answers"]
         if module is Module.DISC:
             return [DiscAnswer(int(row["question_no"]), row["mirip"].upper(), row["tidak_mirip"].upper()) for row in rows]
         return [ChoiceAnswer(int(row["question_no"]), row["answer"].upper()) for row in rows]
 
     def update_module_status(self, participant, module, status, error_code="", error_message="") -> None:
+        self._require_active_job(participant.participant_id)
         response = self.client.patch(
-            f"/api/v1/automation/participants/{participant.participant_id}/modules/{module.value}",
-            json={"status": status.value, "overall_status": participant.overall_status.value, "error_code": error_code, "error_message": error_message, "attempt_count": participant.attempt_count, "pdf_status": participant.pdf_status, "pdf_path": participant.pdf_path},
+            f"/api/v1/worker/jobs/{participant.participant_id}/modules/{module.value}",
+            headers=self._worker_headers(),
+            json={
+                "status": status.value,
+                "error_code": error_code,
+                "error_message": error_message,
+                "pdf_path": participant.pdf_path,
+            },
         )
         response.raise_for_status()
+        if response.json().get("job_status") in {"DONE", "FAILED", "REVIEW_REQUIRED"}:
+            self._finish_active_job()
+
+    def _require_active_job(self, participant_id: str) -> None:
+        if participant_id != self._active_job_id:
+            raise ConfigurationError("API job is not owned by this worker")
+
+    def _start_heartbeat(self) -> None:
+        self._heartbeat_stop.clear()
+        self._heartbeat_thread = Thread(
+            target=self._heartbeat_loop,
+            name="frexor-heartbeat",
+            daemon=True,
+        )
+        self._heartbeat_thread.start()
+
+    def _heartbeat_loop(self) -> None:
+        while not self._heartbeat_stop.wait(self.config.heartbeat_interval_seconds):
+            job_id = self._active_job_id
+            if job_id is None:
+                return
+            try:
+                response = self.client.post(
+                    f"/api/v1/worker/jobs/{job_id}/heartbeat",
+                    headers=self._worker_headers(),
+                )
+                response.raise_for_status()
+            except Exception:
+                # The next status update remains authoritative; lease recovery handles hard failures.
+                continue
+
+    def _finish_active_job(self) -> None:
+        self._heartbeat_stop.set()
+        thread = self._heartbeat_thread
+        if thread is not None and thread.is_alive():
+            thread.join(timeout=2)
+        self._heartbeat_thread = None
+        self._active_job_id = None
+
+    def close(self) -> None:
+        self._finish_active_job()
+        self.client.close()
