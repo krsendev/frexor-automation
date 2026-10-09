@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 import time
 import tomllib
@@ -9,6 +10,9 @@ from ..config import FrexorConfig
 from ..domain import ChoiceAnswer, DiscAnswer, Module, Participant, frexor_identity
 from ..errors import ConfigurationError, FrexorError, LoginRequiredError, UnsafeUiStateError
 from .base import FrexorAdapter
+
+
+logger = logging.getLogger("frexor_automation")
 
 
 class WindowsFrexorAdapter(FrexorAdapter):
@@ -499,6 +503,11 @@ class WindowsFrexorAdapter(FrexorAdapter):
             return False
 
     def close_after_success(self) -> None:
+        logger.info(
+            "APPLICATION_CLEANUP start close_frexor=%s close_edge=%s",
+            self.config.close_after_success,
+            self.config.close_edge_after_success,
+        )
         if self.config.close_edge_after_success:
             self._close_edge_windows()
         if self.config.close_after_success:
@@ -507,10 +516,32 @@ class WindowsFrexorAdapter(FrexorAdapter):
     def _close_frexor_window(self) -> None:
         window = self.window
         if window is None:
+            logger.info("FREXOR_CLOSE skipped because no window is connected")
             return
+        process_id = getattr(self.app, "process", None)
         try:
-            window.close()
-            window.wait_not("exists", timeout=self.config.action_timeout_seconds)
+            try:
+                window.close()
+                window.wait_not("exists", timeout=min(self.config.action_timeout_seconds, 3))
+                logger.info("FREXOR_CLOSE graceful success pid=%s", process_id)
+                return
+            except Exception as exc:
+                logger.warning("FREXOR_CLOSE graceful failed pid=%s: %s", process_id, exc)
+
+            if process_id is not None:
+                import psutil
+
+                try:
+                    process = psutil.Process(int(process_id))
+                    process.terminate()
+                    try:
+                        process.wait(timeout=5)
+                    except psutil.TimeoutExpired:
+                        process.kill()
+                        process.wait(timeout=5)
+                    logger.info("FREXOR_CLOSE process terminated pid=%s", process_id)
+                except psutil.NoSuchProcess:
+                    logger.info("FREXOR_CLOSE process already stopped pid=%s", process_id)
         finally:
             self.window = None
             self.app = None
@@ -533,5 +564,29 @@ class WindowsFrexorAdapter(FrexorAdapter):
         for window in edge_windows:
             try:
                 window.close()
-            except Exception:
+            except Exception as exc:
+                logger.warning("EDGE_CLOSE graceful window close failed: %s", exc)
                 continue
+        if edge_windows:
+            time.sleep(1)
+
+        remaining = []
+        for process in psutil.process_iter(["pid", "name"]):
+            try:
+                if (process.info["name"] or "").casefold() == "msedge.exe":
+                    process.terminate()
+                    remaining.append(process)
+            except (psutil.Error, OSError):
+                continue
+        _, alive = psutil.wait_procs(remaining, timeout=5)
+        for process in alive:
+            try:
+                process.kill()
+            except (psutil.Error, OSError):
+                continue
+        logger.info(
+            "EDGE_CLOSE windows=%s processes=%s forced=%s",
+            len(edge_windows),
+            len(remaining),
+            len(alive),
+        )
