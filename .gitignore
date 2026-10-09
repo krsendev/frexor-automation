@@ -12,5 +12,9 @@ logs/
 diagnostics/
 output/
 discovery/
-src/frexor_api/data/
+/src/frexor_api/data/
+apps/server-api/src/frexor_api/data/
+apps/server-api/.env
+apps/windows-worker/config.toml
+apps/windows-worker/frexor_ui_map.toml
 .env.frexor

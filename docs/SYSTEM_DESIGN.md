@@ -14,7 +14,7 @@ Website Form + Backend
       |
       | webhook JSON
       v
-Automation API Linux <------ Backend/Dashboard HR (PARTIAL)
+Automation Server API <----- Backend/Dashboard HR (PARTIAL)
 FastAPI + SQLite
       ^
       | claim / answers / status / heartbeat
@@ -27,15 +27,15 @@ Frexor + Edge PDF
 
 ## 3. Deployment Topology
 
-### Linux API Host
+### Automation Server API
 
 - FastAPI.
 - SQLite database.
-- systemd service.
+- `Frexor Server.exe` pada deployment satu VM Windows; systemd tetap didukung sebagai alternatif Linux.
 - Result storage untuk merged PDF.
 - Future reverse proxy dan HTTPS.
 
-### Windows VM
+### Windows Worker
 
 - Active interactive user session.
 - Python worker atau packaged executable.
@@ -55,7 +55,7 @@ Frexor + Edge PDF
 
 ### 4.1 Automation API
 
-Package: `src/frexor_api`.
+Package: `apps/server-api/src/frexor_api`.
 
 Responsibilities:
 
@@ -73,7 +73,7 @@ Responsibilities:
 
 ### 4.2 Worker Runtime
 
-Package: `src/frexor_automation`.
+Package: `apps/windows-worker/src/frexor_automation`.
 
 Responsibilities:
 
@@ -123,7 +123,7 @@ Website Backend       API              SQLite          Worker       Frexor
 ## 6. Queue and Concurrency
 
 - SQLite hanya dibuka oleh API host.
-- Worker tidak memiliki akses filesystem/database Linux.
+- Worker tidak membuka SQLite secara langsung; seluruh komunikasi queue melalui HTTP API.
 - `BEGIN IMMEDIATE` mencegah dua claim menulis bersamaan.
 - Update claim memakai predicate `status = 'QUEUED'`.
 - Worker ID dan lease diperiksa pada endpoint worker.

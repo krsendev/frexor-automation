@@ -6,7 +6,8 @@
 2. `PRD/PRD_Frexor_Automation_Platform_v3.md` - requirement induk terbaru.
 3. `docs/SYSTEM_DESIGN.md` - arsitektur current dan planned.
 4. `docs/TEST_STRATEGY.md` - pengujian yang sudah dan belum dilakukan.
-5. `docs/PRODUCTION_DEPLOYMENT.md` - deployment Linux dan Windows.
+5. `docs/WINDOWS_SINGLE_VM_DEPLOYMENT.md` - instalasi ulang dan operasi pada satu VM Windows.
+6. `docs/PRODUCTION_DEPLOYMENT.md` - alternatif deployment API Linux dan worker Windows.
 
 ## Product Requirements
 
@@ -32,6 +33,7 @@
 
 - `docs/TEST_STRATEGY.md` - test matrix dan production gate.
 - `docs/OPERATIONS_RUNBOOK.md` - operasi, backup, incident, dan token rotation.
+- `docs/WINDOWS_SINGLE_VM_DEPLOYMENT.md` - panduan utama satu VM: install, build, start, stop, update, backup, dan rollback.
 - `docs/PRODUCTION_DEPLOYMENT.md` - instalasi service dan worker.
 - `docs/WINDOWS_BACKGROUND_WORKER.md` - build executable dan Task Scheduler worker tanpa terminal.
 

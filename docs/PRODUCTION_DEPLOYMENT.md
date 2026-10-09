@@ -20,11 +20,12 @@ Frontend tidak boleh menyimpan `FREXOR_WORKER_TOKEN`. Frontend atau backend form
 2. Salin repository ke `/opt/frexor-automation`, buat `.venv`, lalu install:
 
    ```bash
+   cd /opt/frexor-automation/apps/server-api
    python3 -m venv .venv
-   .venv/bin/python -m pip install -e ".[api]"
+   .venv/bin/python -m pip install -e .
    ```
 
-3. Buat `/etc/frexor-automation.env` berdasarkan `.env.frexor.example`. Batasi permission:
+3. Buat `/etc/frexor-automation.env` berdasarkan `apps/server-api/.env.example`. Batasi permission:
 
    ```bash
    sudo chmod 600 /etc/frexor-automation.env
@@ -36,7 +37,7 @@ Frontend tidak boleh menyimpan `FREXOR_WORKER_TOKEN`. Frontend atau backend form
    sudo install -d -o frexor -g frexor -m 750 /var/lib/frexor-automation
    ```
 
-5. Salin `deploy/frexor-api.service` ke `/etc/systemd/system/`, lalu jalankan:
+5. Salin `apps/server-api/deploy/frexor-api.service` ke `/etc/systemd/system/`, lalu jalankan:
 
    ```bash
    sudo systemctl daemon-reload
@@ -52,13 +53,13 @@ Frontend tidak boleh menyimpan `FREXOR_WORKER_TOKEN`. Frontend atau backend form
 
 ## Windows Worker
 
-1. Install project pada `.venv` Windows dengan `py -m pip install -e ".[worker]"`.
-2. Salin `config.example.toml` menjadi `config.toml`.
+1. Masuk ke `apps\windows-worker`, lalu install dengan `py -m pip install -e .`.
+2. Salin `apps\windows-worker\config.example.toml` menjadi `config.toml`.
 3. Atur `data_source.type = "api"`, adapter `windows`, URL API, worker token, worker ID, dan folder PDF.
 4. Jalankan manual terlebih dahulu:
 
    ```powershell
-   powershell -ExecutionPolicy Bypass -File scripts\run_worker.ps1
+   powershell -ExecutionPolicy Bypass -File apps\windows-worker\scripts\run_worker.ps1
    ```
 
 5. Setelah dummy nyata lulus, build dan pasang executable background sesuai `docs/WINDOWS_BACKGROUND_WORKER.md`. Task Scheduler berjalan **saat operator login**, bukan saat boot. UI Automation membutuhkan desktop interaktif dan sesi Windows yang tidak terkunci.
@@ -96,8 +97,8 @@ Authorization: Bearer <webhook-token>
 Gunakan SQLite backup API agar backup konsisten walaupun database memakai WAL:
 
 ```bash
-/opt/frexor-automation/.venv/bin/python \
-  /opt/frexor-automation/scripts/backup_sqlite.py \
+/opt/frexor-automation/apps/server-api/.venv/bin/python \
+  /opt/frexor-automation/apps/server-api/scripts/backup_sqlite.py \
   /var/lib/frexor-automation/frexor-assessment.db \
   /var/backups/frexor-automation
 ```

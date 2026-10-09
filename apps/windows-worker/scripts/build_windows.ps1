@@ -5,7 +5,7 @@ if (-not (Test-Path ".venv\Scripts\python.exe")) {
 }
 
 & .venv\Scripts\python.exe -m pip install --upgrade pip
-& .venv\Scripts\python.exe -m pip install -e ".[worker,build]"
+& .venv\Scripts\python.exe -m pip install -e ".[build]"
 if (Test-Path "build") {
     Remove-Item "build" -Recurse -Force
 }

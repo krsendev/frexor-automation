@@ -2,14 +2,14 @@
 
 ## 1. Daily Start
 
-### Linux
+### Server API
 
-```bash
-systemctl status frexor-api
-curl http://127.0.0.1:8000/health
+```powershell
+Get-Process "Frexor Server" -ErrorAction SilentlyContinue
+Invoke-RestMethod http://127.0.0.1:8000/health
 ```
 
-### Windows
+### Windows Worker
 
 - Login operator.
 - Pastikan desktop tidak terkunci.
@@ -49,16 +49,17 @@ curl http://127.0.0.1:8000/health
 
 ## 4. Backup
 
-```bash
-python scripts/backup_sqlite.py \
-  /var/lib/frexor-automation/frexor-assessment.db \
-  /var/backups/frexor-automation
+```powershell
+Set-Location C:\FrexorPlatform\source\apps\server-api
+.venv\Scripts\python.exe scripts\backup_sqlite.py `
+  "C:\FrexorPlatform\data\database\frexor-assessment.db" `
+  "C:\FrexorPlatform\data\backups"
 ```
 
 Verify:
 
-```bash
-sqlite3 <backup-file> 'PRAGMA integrity_check;'
+```powershell
+.venv\Scripts\python.exe -c "import sqlite3; print(sqlite3.connect(r'C:\path\backup.db').execute('PRAGMA integrity_check').fetchone()[0])"
 ```
 
 Backup file menerima perlindungan yang sama dengan database utama.

@@ -26,7 +26,7 @@ def main() -> int:
     try:
         from pywinauto import Desktop
     except ImportError:
-        print('Install the project on Windows first: py -m pip install -e ".[worker]"')
+        print('Install worker dari apps\\windows-worker: py -m pip install -e .')
         return 1
     desktop = Desktop(backend="uia")
     if args.list_windows:

@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "frexor-automation-server"
+version = "0.1.0"
+description = "Frexor queue, result upload, and download API"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115,<0.116",
+  "python-dotenv>=1.0,<2",
+  "python-multipart>=0.0.20,<1",
+  "uvicorn[standard]>=0.34,<1",
+]
+
+[project.optional-dependencies]
+build = ["pyinstaller>=6.11,<7"]
+test = ["httpx>=0.28,<1"]
+
+[project.scripts]
+frexor-api = "frexor_api.run:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

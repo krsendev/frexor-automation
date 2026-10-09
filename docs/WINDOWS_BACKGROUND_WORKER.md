@@ -16,9 +16,10 @@ Task ini bukan Windows Service dan tidak boleh dijalankan pada Session 0.
 
 ## Build
 
-Jalankan pada Windows dari root repository:
+Jalankan pada Windows dari direktori `apps\windows-worker`:
 
 ```powershell
+Set-Location C:\FrexorPlatform\source\apps\windows-worker
 powershell -ExecutionPolicy Bypass -File scripts\build_worker_windows.ps1
 ```
 
@@ -76,14 +77,14 @@ Hentikan tes melalui Task Manager sebelum memasang scheduled task.
 Jalankan sebagai akun Windows khusus automation:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts\install_worker_task.ps1
+powershell -ExecutionPolicy Bypass -File apps\windows-worker\scripts\install_worker_task.ps1
 ```
 
 Untuk folder instalasi lain:
 
 ```powershell
 powershell -ExecutionPolicy Bypass `
-  -File scripts\install_worker_task.ps1 `
+  -File apps\windows-worker\scripts\install_worker_task.ps1 `
   -WorkerDirectory "C:\Frexor Automation\Frexor Worker"
 ```
 
@@ -125,7 +126,7 @@ Start-ScheduledTask -TaskName "Frexor Automation Worker"
 Uninstall:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts\uninstall_worker_task.ps1
+powershell -ExecutionPolicy Bypass -File apps\windows-worker\scripts\uninstall_worker_task.ps1
 ```
 
 ## Validasi

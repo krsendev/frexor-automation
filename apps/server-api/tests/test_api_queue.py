@@ -4,8 +4,9 @@ from pathlib import Path
 import tempfile
 import unittest
 
-os.environ.setdefault("FREXOR_WEBHOOK_TOKEN", "test-webhook-token")
-os.environ.setdefault("FREXOR_WORKER_TOKEN", "test-worker-token")
+# Tests must not inherit production/local tokens from a sourced .env file.
+os.environ["FREXOR_WEBHOOK_TOKEN"] = "test-webhook-token"
+os.environ["FREXOR_WORKER_TOKEN"] = "test-worker-token"
 
 import httpx
 

@@ -8,7 +8,7 @@ if (-not (Test-Path ".venv\Scripts\python.exe")) {
 }
 
 & .venv\Scripts\python.exe -m pip install --upgrade pip
-& .venv\Scripts\python.exe -m pip install -e ".[worker,build]"
+& .venv\Scripts\python.exe -m pip install -e ".[build]"
 & .venv\Scripts\python.exe -m PyInstaller FrexorWorker.spec --noconfirm --clean
 
 $OutputDirectory = Join-Path $ProjectRoot "dist\Frexor Worker"
