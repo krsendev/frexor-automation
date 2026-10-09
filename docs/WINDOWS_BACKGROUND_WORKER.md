@@ -87,6 +87,8 @@ Installer membuat task `Frexor Automation Worker` dengan aturan:
 - instance baru diabaikan jika worker masih hidup;
 - langsung dijalankan setelah instalasi.
 
+Jika Task Scheduler VM menolak task definition dengan `HRESULT 0x80041316`, installer otomatis membuat shortcut pada Startup folder user. Karena executable bertipe windowed, fallback ini juga berjalan tanpa terminal dan tetap menggunakan single-instance lock.
+
 ## Operasi
 
 Status:
@@ -94,6 +96,13 @@ Status:
 ```powershell
 Get-ScheduledTask -TaskName "Frexor Automation Worker"
 Get-ScheduledTaskInfo -TaskName "Frexor Automation Worker"
+```
+
+Jika installer memakai fallback, periksa:
+
+```powershell
+Test-Path "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\Frexor Automation Worker.lnk"
+Get-Process "Frexor Worker" -ErrorAction SilentlyContinue
 ```
 
 Restart:

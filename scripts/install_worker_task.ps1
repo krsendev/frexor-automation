@@ -36,16 +36,47 @@ $Settings = New-ScheduledTaskSettingsSet `
     -MultipleInstances IgnoreNew `
     -StartWhenAvailable
 
-Register-ScheduledTask `
-    -TaskName $TaskName `
-    -Action $Action `
-    -Trigger $Trigger `
-    -Principal $Principal `
-    -Settings $Settings `
-    -Description "Frexor API worker. Membutuhkan sesi desktop user aktif dan tidak terkunci." `
-    -Force | Out-Null
+$InstalledWithTaskScheduler = $false
+try {
+    Register-ScheduledTask `
+        -TaskName $TaskName `
+        -Action $Action `
+        -Trigger $Trigger `
+        -Principal $Principal `
+        -Settings $Settings `
+        -Description "Frexor API worker. Membutuhkan sesi desktop user aktif dan tidak terkunci." `
+        -Force `
+        -ErrorAction Stop | Out-Null
+    Start-ScheduledTask -TaskName $TaskName
+    $InstalledWithTaskScheduler = $true
+    Write-Host "Task '$TaskName' terpasang dan dijalankan untuk user $CurrentUser."
+}
+catch {
+    Write-Warning "Task Scheduler tidak kompatibel pada VM ini: $($_.Exception.Message)"
+    Write-Host "Memasang fallback Startup shortcut untuk user $CurrentUser..."
 
-Start-ScheduledTask -TaskName $TaskName
-Write-Host "Task '$TaskName' terpasang dan dijalankan untuk user $CurrentUser."
+    $StartupDirectory = [Environment]::GetFolderPath("Startup")
+    $ShortcutPath = Join-Path $StartupDirectory "Frexor Automation Worker.lnk"
+    $Shell = New-Object -ComObject WScript.Shell
+    $Shortcut = $Shell.CreateShortcut($ShortcutPath)
+    $Shortcut.TargetPath = $Executable
+    $Shortcut.Arguments = $Arguments
+    $Shortcut.WorkingDirectory = $WorkerDirectory
+    $Shortcut.Description = "Frexor API background worker"
+    $Shortcut.Save()
+
+    Start-Process `
+        -FilePath $Executable `
+        -ArgumentList $Arguments `
+        -WorkingDirectory $WorkerDirectory
+    Write-Host "Startup shortcut terpasang: $ShortcutPath"
+}
+
+if ($InstalledWithTaskScheduler) {
+    Write-Host "Mode startup: Task Scheduler"
+}
+else {
+    Write-Host "Mode startup: Windows Startup folder"
+}
 Write-Host "Launcher akan mencoba ulang setelah 60 detik jika worker berhenti karena error."
 Write-Host "Log worker: $WorkerDirectory\logs\automation.log"
