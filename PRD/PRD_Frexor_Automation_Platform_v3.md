@@ -301,7 +301,7 @@ Status result dibuat terpisah agar kegagalan merge/upload tidak mengubah fakta b
 | Crash saat PROCESSING | Belum diuji operasional |
 | Network interruption | Belum diuji |
 | Backup dan restore | Backup script diuji, restore operasional belum |
-| Task Scheduler/systemd | Belum dinyatakan lulus |
+| Task Scheduler/systemd | Installer worker tersedia; uji operasional Windows belum |
 | Merge PDF | Implemented; automated tests lulus, batch nyata belum diuji |
 | Upload PDF server | Implemented; automated upload/download test lulus |
 | Dashboard download | Belum dibuat |

@@ -118,6 +118,8 @@ frexor-automation --config config.toml worker
 frexor-automation --config config.toml ui
 ```
 
+Untuk operasi Windows tanpa terminal, build `Frexor Worker.exe` dan pasang Task Scheduler menggunakan panduan `docs/WINDOWS_BACKGROUND_WORKER.md`. Sesi akun automation harus tetap login dan tidak terkunci.
+
 Jalankan API Linux dengan environment variable dari `.env.frexor.example`:
 
 ```bash

@@ -61,7 +61,7 @@ Frontend tidak boleh menyimpan `FREXOR_WORKER_TOKEN`. Frontend atau backend form
    powershell -ExecutionPolicy Bypass -File scripts\run_worker.ps1
    ```
 
-5. Setelah dummy nyata lulus, buat Task Scheduler yang berjalan **saat operator login**, bukan saat boot. UI Automation membutuhkan desktop interaktif dan sesi Windows yang tidak terkunci.
+5. Setelah dummy nyata lulus, build dan pasang executable background sesuai `docs/WINDOWS_BACKGROUND_WORKER.md`. Task Scheduler berjalan **saat operator login**, bukan saat boot. UI Automation membutuhkan desktop interaktif dan sesi Windows yang tidak terkunci.
 
 ## Kontrak Frontend
 

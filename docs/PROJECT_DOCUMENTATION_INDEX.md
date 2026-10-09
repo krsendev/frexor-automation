@@ -33,6 +33,7 @@
 - `docs/TEST_STRATEGY.md` - test matrix dan production gate.
 - `docs/OPERATIONS_RUNBOOK.md` - operasi, backup, incident, dan token rotation.
 - `docs/PRODUCTION_DEPLOYMENT.md` - instalasi service dan worker.
+- `docs/WINDOWS_BACKGROUND_WORKER.md` - build executable dan Task Scheduler worker tanpa terminal.
 
 ## Roadmap
 

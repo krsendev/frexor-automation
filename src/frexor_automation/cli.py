@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import os
 from pathlib import Path
 import sys
@@ -27,6 +28,7 @@ def parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = parser().parse_args(argv)
+    logger: logging.Logger | None = None
     try:
         if args.command == "ui":
             from .ui import run_ui
@@ -65,6 +67,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "worker":
             if config.data_source != "api":
                 raise ValueError("The worker command requires data_source.type = 'api'")
+            logger.info("WORKER_START worker_id=%s api=%s", repository.worker_id, config.api.base_url)
             print(f"Worker {repository.worker_id} connected to {config.api.base_url}")
             try:
                 while True:
@@ -72,11 +75,16 @@ def main(argv: list[str] | None = None) -> int:
                     if summary.total == 0:
                         time.sleep(config.api.poll_interval_seconds)
                     else:
+                        logger.info(
+                            "WORKER_JOB_COMPLETE total=%s success=%s failed=%s",
+                            summary.total, summary.success, summary.failed,
+                        )
                         print(
                             f"Job complete: success={summary.success} "
                             f"failed={summary.failed}"
                         )
             except KeyboardInterrupt:
+                logger.info("WORKER_STOP requested by operator")
                 print("Worker stopped safely")
                 return 0
             finally:
@@ -92,7 +100,16 @@ def main(argv: list[str] | None = None) -> int:
             print(f"FAILED {participant_id}: {error_code}{suffix}")
         return 0
     except (AutomationError, OSError, ValueError) as exc:
-        print(f"ERROR: {exc}", file=sys.stderr)
+        if logger is not None:
+            logger.exception("FATAL %s", exc)
+        if sys.stderr is not None:
+            print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
+    except Exception as exc:
+        if logger is not None:
+            logger.exception("UNEXPECTED_FATAL %s", exc)
+        if sys.stderr is not None:
+            print(f"ERROR: {exc}", file=sys.stderr)
         return 1
 
 

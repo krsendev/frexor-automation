@@ -2,7 +2,7 @@
 
 ## 1. Current Evidence
 
-- Automated unit/integration suite terakhir: 49 tests lulus.
+- Automated unit/integration suite terakhir: 50 tests lulus.
 - API queue flow diuji dari webhook sampai status `DONE` menggunakan mock worker.
 - Satu controlled Frexor real flow dilaporkan berhasil.
 - Validasi payload website berhasil menolak jawaban DISC kosong atau sama.
@@ -61,7 +61,7 @@ Keberhasilan tersebut belum membuktikan kapasitas batch, recovery pada semua tim
 | T13 | Wrong PDF filename | PDF_ASSOCIATION_FAILED | Unit lulus |
 | T14 | Multiple changed PDFs | Ditolak | Belum real |
 | T15 | Backup restore | Queue/status utuh | Belum |
-| T16 | Task Scheduler restart | Satu worker aktif | Belum |
+| T16 | Task Scheduler restart | Satu worker aktif | Installer tersedia; uji VM Windows belum |
 | T17 | systemd restart | API kembali sehat | Belum |
 
 ## 4. Batch Test Plan

@@ -1,6 +1,8 @@
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from frexor_automation.config import load_config
 from frexor_automation.config_writer import write_config
@@ -8,9 +10,16 @@ from frexor_automation.errors import ConfigurationError
 from frexor_automation.operator_messages import friendly_error
 from frexor_automation.repositories import GoogleSheetsRepository, PARTICIPANT_HEADERS
 from frexor_automation.state_store import RunState, RunStateStore
+from worker_launcher import default_config_path
 
 
 class OperatorSupportTests(unittest.TestCase):
+    def test_worker_launcher_accepts_config_path_from_environment(self):
+        with tempfile.TemporaryDirectory() as directory:
+            expected = Path(directory) / "worker.toml"
+            with patch.dict(os.environ, {"FREXOR_CONFIG_PATH": str(expected)}):
+                self.assertEqual(default_config_path(), expected.resolve())
+
     def test_first_run_configuration_is_loadable(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
