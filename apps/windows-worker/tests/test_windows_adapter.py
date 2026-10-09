@@ -294,6 +294,23 @@ class WindowsAdapterTests(unittest.TestCase):
         self.assertEqual(adapter.window.edits[3].value, "A")
         self.assertEqual(adapter.window.edits[4].value, "D")
 
+    def test_disc_answers_are_typed_as_one_verified_stream(self):
+        adapter = self.adapter()
+        adapter.window = FakeEditWindow(51)
+        adapter.current_module = Module.DISC
+        adapter.ui_map["DISC"]["answer_start_index"] = 3
+        answers = [
+            DiscAnswer(number, "ABCD"[(number - 1) % 4], "ABCD"[number % 4])
+            for number in range(1, 25)
+        ]
+
+        adapter.fill_disc_answers(answers)
+
+        self.assertEqual(
+            "".join(control.value for control in adapter.window.edits[3:51]),
+            "".join(answer.mirip + answer.tidak_mirip for answer in answers),
+        )
+
     def test_choice_answer_uses_keyboard_auto_advance(self):
         adapter = self.adapter()
         adapter.window = FakeEditWindow(63)

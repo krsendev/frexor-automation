@@ -414,6 +414,47 @@ class WindowsFrexorAdapter(FrexorAdapter):
             buttons[0].click_input()
             return
 
+    def fill_disc_answers(self, answers: list[DiscAnswer]) -> None:
+        if getattr(self, "window", None) is None:
+            return super().fill_disc_answers(answers)
+        if self.current_module is not Module.DISC:
+            raise UnsafeUiStateError("Current Frexor module is not DISC")
+
+        ordered = sorted(answers, key=lambda item: item.question_no)
+        start = int(self.ui_map[Module.DISC.value]["answer_start_index"])
+        expected_fields = len(ordered) * 2
+        edits = self._descendants("Edit")
+        if start + expected_fields > len(edits):
+            raise UnsafeUiStateError(
+                f"Frexor DISC expected {expected_fields} answer fields from Edit index {start}"
+            )
+
+        # DISC advances Mirip -> Tidak Mirip -> next question after each character.
+        stream = "".join(
+            answer.mirip + answer.tidak_mirip
+            for answer in ordered
+        )
+        edits[start].click_input()
+        edits[start].type_keys(stream, set_foreground=False, pause=0.05)
+        time.sleep(0.25)
+
+        refreshed = self._descendants("Edit")
+        mismatches = []
+        for offset, expected in enumerate(ordered):
+            first = start + offset * 2
+            actual_mirip = self._control_value(refreshed[first]).strip().upper()
+            actual_tidak = self._control_value(refreshed[first + 1]).strip().upper()
+            if (
+                actual_mirip != expected.mirip.strip().upper()
+                or actual_tidak != expected.tidak_mirip.strip().upper()
+            ):
+                mismatches.append(expected.question_no)
+        if mismatches:
+            self._dismiss_disc_pair_warning()
+            raise UnsafeUiStateError(
+                f"Frexor DISC bulk input verification failed at questions {mismatches}"
+            )
+
     def fill_choice_question(self, module: Module, answer: ChoiceAnswer) -> None:
         if getattr(self, "window", None) is not None:
             start = int(self.ui_map[module.value]["answer_start_index"])

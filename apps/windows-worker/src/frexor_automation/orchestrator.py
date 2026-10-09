@@ -237,8 +237,8 @@ class Orchestrator:
         total = len(answers)
         ordered_answers = sorted(answers, key=lambda a: a.question_no)
         if module is Module.DISC:
+            self.adapter.fill_disc_answers(ordered_answers)  # type: ignore[arg-type]
             for index, answer in enumerate(ordered_answers, start=1):
-                self.adapter.fill_disc_question(answer)  # type: ignore[arg-type]
                 self.progress(participant.participant_id, module, index, total)
                 self.logger.info(
                     "%s %s input question=%s", participant.participant_id, module, answer.question_no

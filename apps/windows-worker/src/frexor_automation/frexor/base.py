@@ -21,6 +21,10 @@ class FrexorAdapter(ABC):
     @abstractmethod
     def fill_disc_question(self, answer: DiscAnswer) -> None: ...
 
+    def fill_disc_answers(self, answers: list[DiscAnswer]) -> None:
+        for answer in answers:
+            self.fill_disc_question(answer)
+
     @abstractmethod
     def fill_choice_question(self, module: Module, answer: ChoiceAnswer) -> None: ...
 
