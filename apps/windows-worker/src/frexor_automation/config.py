@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import os
 from pathlib import Path
 import tomllib
+
+from dotenv import load_dotenv
 
 from .errors import ConfigurationError
 
@@ -90,6 +93,7 @@ def load_config(path: str | Path) -> AppConfig:
     config_path = Path(path).resolve()
     if not config_path.exists():
         raise ConfigurationError(f"Configuration not found: {config_path}")
+    load_dotenv(config_path.parent / ".env")
     with config_path.open("rb") as handle:
         raw = tomllib.load(handle)
     base = config_path.parent
@@ -132,7 +136,7 @@ def load_config(path: str | Path) -> AppConfig:
             ),
             api=ApiConfig(
                 base_url=api.get("base_url", "").rstrip("/"),
-                token=api.get("token", ""),
+                token=os.getenv("FREXOR_WORKER_TOKEN", "").strip(),
                 timeout_seconds=float(api.get("timeout_seconds", 30)),
                 worker_id=api.get("worker_id", "").strip(),
                 poll_interval_seconds=float(api.get("poll_interval_seconds", 5)),

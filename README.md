@@ -82,6 +82,7 @@ cd apps\windows-worker
 py -m venv .venv
 .venv\Scripts\python.exe -m pip install -e .
 Copy-Item config.example.toml config.toml
+Copy-Item .env.example .env
 Copy-Item frexor_ui_map.example.toml frexor_ui_map.toml
 .venv\Scripts\python.exe -m frexor_automation.cli --config config.toml worker
 ```
@@ -110,7 +111,7 @@ powershell -ExecutionPolicy Bypass -File scripts\build_worker_windows.ps1
 
 ## Data dan Secret
 
-Jangan commit `.env`, `config.toml`, token, credential, database production, log, atau PDF peserta.
+Jangan commit `.env`, `config.toml`, token, credential, database production, log, atau PDF peserta. Token worker disimpan sebagai `FREXOR_WORKER_TOKEN` pada `apps/windows-worker/.env`, bukan di `config.toml`.
 
 Gunakan folder data di luar source code:
 

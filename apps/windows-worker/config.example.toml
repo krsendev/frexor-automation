@@ -29,7 +29,6 @@ iq_sheet = "IQ"
 
 [api]
 base_url = "http://127.0.0.1:8000"
-token = ""
 timeout_seconds = 30
 worker_id = "frexor-vm-01"
 poll_interval_seconds = 5

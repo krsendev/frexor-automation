@@ -175,7 +175,6 @@ close_edge_after_success = true
 
 [api]
 base_url = "http://127.0.0.1:8000"
-token = "<token-worker-yang-sama-dengan-server>"
 timeout_seconds = 30
 worker_id = "frexor-vm-01"
 poll_interval_seconds = 5
@@ -198,6 +197,14 @@ IQ = "IQ"
 level = "INFO"
 directory = "C:\\FrexorPlatform\\data\\logs\\worker"
 ```
+
+Buat `C:\FrexorPlatform\runtime\worker\.env` dan gunakan nilai yang sama dengan `FREXOR_WORKER_TOKEN` pada server:
+
+```env
+FREXOR_WORKER_TOKEN=<token-worker-yang-sama-dengan-server>
+```
+
+Token worker tidak disimpan di `config.toml`. File `.env` tidak boleh masuk Git dan akses filesystem-nya harus dibatasi ke akun automation serta administrator.
 
 Salin UI map yang sudah terbukti bekerja:
 
@@ -226,6 +233,41 @@ Health check:
 ```powershell
 Invoke-RestMethod http://127.0.0.1:8000/health
 ```
+
+### Akses API dari LAN
+
+Pertahankan `FREXOR_API_HOST=127.0.0.1` jika API hanya dipakai website dan worker pada VM yang sama. Jika backend website atau perangkat lain harus mengakses API melalui IP VM, ubah `.env` source dan runtime menjadi:
+
+```env
+FREXOR_API_HOST=0.0.0.0
+FREXOR_API_PORT=8000
+```
+
+Restart server, lalu jalankan PowerShell sebagai Administrator untuk membuka port hanya bagi subnet lokal:
+
+```powershell
+New-NetFirewallRule `
+  -DisplayName "Frexor Server API LAN" `
+  -Direction Inbound `
+  -Protocol TCP `
+  -LocalPort 8000 `
+  -RemoteAddress LocalSubnet `
+  -Action Allow
+```
+
+Verifikasi listener dan alamat VM:
+
+```powershell
+Get-NetTCPConnection -LocalPort 8000 -State Listen
+Get-NetIPAddress -AddressFamily IPv4 |
+  Where-Object {
+    $_.IPAddress -notlike "127.*" -and
+    $_.IPAddress -notlike "169.254.*"
+  }
+Invoke-RestMethod http://<IP-VM>:8000/health
+```
+
+Jangan meneruskan port 8000 ke internet. Gunakan firewall `LocalSubnet`; deployment publik memerlukan HTTPS reverse proxy dan kontrol akses tambahan.
 
 Worker:
 

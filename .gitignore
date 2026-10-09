@@ -17,4 +17,6 @@ apps/server-api/src/frexor_api/data/
 apps/server-api/.env
 apps/windows-worker/config.toml
 apps/windows-worker/frexor_ui_map.toml
+apps/windows-worker/.env
 .env.frexor
+.PRD/

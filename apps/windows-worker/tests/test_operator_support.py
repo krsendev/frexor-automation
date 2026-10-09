@@ -32,6 +32,22 @@ class OperatorSupportTests(unittest.TestCase):
             self.assertEqual(config.sheets.spreadsheet_id, "sheet-id")
             self.assertTrue((root / "frexor_ui_map.toml").exists())
 
+    def test_api_token_is_loaded_from_environment_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config_path = root / "config.toml"
+            write_config(
+                config_path, "C:/Frexor/Frexor.exe", "", "C:/secret.json",
+                "C:/Frexor/Results", "C:/Assessment Results",
+                source_type="api", api_base_url="http://127.0.0.1:8000",
+                api_token="worker-secret",
+            )
+            with patch.dict(os.environ, {}, clear=False):
+                os.environ.pop("FREXOR_WORKER_TOKEN", None)
+                config = load_config(config_path)
+            self.assertEqual(config.api.token, "worker-secret")
+            self.assertNotIn("worker-secret", config_path.read_text(encoding="utf-8"))
+
     def test_run_state_round_trip(self):
         with tempfile.TemporaryDirectory() as directory:
             store = RunStateStore(Path(directory) / "state.json")

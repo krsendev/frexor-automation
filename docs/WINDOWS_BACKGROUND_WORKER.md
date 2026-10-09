@@ -28,6 +28,7 @@ Output:
 ```text
 dist\Frexor Worker\
 ├── Frexor Worker.exe
+├── .env.example
 ├── config.example.toml
 └── frexor_ui_map.example.toml
 ```
@@ -36,8 +37,11 @@ Salin konfigurasi aktif ke folder output:
 
 ```powershell
 Copy-Item config.toml "dist\Frexor Worker\config.toml"
+Copy-Item .env "dist\Frexor Worker\.env"
 Copy-Item frexor_ui_map.toml "dist\Frexor Worker\frexor_ui_map.toml"
 ```
+
+`FREXOR_WORKER_TOKEN` wajib berada di `.env`; jangan simpan token di `config.toml`.
 
 Pastikan path pada `config.toml` tetap valid dari working directory baru. Gunakan absolute path untuk executable Frexor dan folder PDF.
 
