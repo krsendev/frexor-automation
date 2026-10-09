@@ -10,7 +10,7 @@ a = Analysis(
     datas=datas + [("frexor_ui_map.example.toml", ".")],
     hiddenimports=[
         "PySide6.QtCore", "PySide6.QtGui", "PySide6.QtWidgets",
-        "pywinauto", "pythoncom", "pywintypes", "openpyxl", "httpx", "pypdf",
+        "pywinauto", "pythoncom", "pywintypes", "openpyxl", "httpx", "pypdf", "psutil",
     ],
     hookspath=[],
     runtime_hooks=[],

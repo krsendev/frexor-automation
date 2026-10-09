@@ -43,3 +43,6 @@ class MockFrexorAdapter(FrexorAdapter):
         self.actions.append("recover")
         return True
 
+    def close_after_success(self) -> None:
+        self.actions.append("close_after_success")
+

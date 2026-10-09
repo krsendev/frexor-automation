@@ -497,3 +497,41 @@ class WindowsFrexorAdapter(FrexorAdapter):
             return True
         except Exception:
             return False
+
+    def close_after_success(self) -> None:
+        if self.config.close_edge_after_success:
+            self._close_edge_windows()
+        if self.config.close_after_success:
+            self._close_frexor_window()
+
+    def _close_frexor_window(self) -> None:
+        window = self.window
+        if window is None:
+            return
+        try:
+            window.close()
+            window.wait_not("exists", timeout=self.config.action_timeout_seconds)
+        finally:
+            self.window = None
+            self.app = None
+            self.participant = None
+            self.current_module = None
+            self.answer_controls = []
+
+    def _close_edge_windows(self) -> None:
+        from pywinauto import Desktop
+        import psutil
+
+        edge_windows = []
+        for window in Desktop(backend="uia").windows():
+            try:
+                process_id = window.element_info.process_id
+                if psutil.Process(process_id).name().casefold() == "msedge.exe":
+                    edge_windows.append(window)
+            except (psutil.Error, OSError, AttributeError):
+                continue
+        for window in edge_windows:
+            try:
+                window.close()
+            except Exception:
+                continue

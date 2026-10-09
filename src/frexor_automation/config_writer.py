@@ -76,6 +76,8 @@ window_class_name = "GlassWndClass-GlassWindowClass-2"
 startup_timeout_seconds = 30
 action_timeout_seconds = 10
 ui_map_path = "frexor_ui_map.toml"
+close_after_success = true
+close_edge_after_success = true
 
 [sheets]
 spreadsheet_id = {_quoted(spreadsheet_id)}

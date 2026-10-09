@@ -62,6 +62,7 @@ class OrchestratorTests(unittest.TestCase):
 
         stored = repository.participants["P001"]
         self.assertEqual(pdf_manager.actions.count("merge:P001"), 1)
+        self.assertEqual(adapter.actions.count("close_after_success"), 1)
         self.assertEqual(
             stored.pdf_path,
             f"/mock/P001/Hasil Psikotes {date.today().strftime('%d-%m-%Y')} Operator Andi.pdf",
@@ -83,6 +84,7 @@ class OrchestratorTests(unittest.TestCase):
         self.assertEqual(stored.module_statuses[Module.IQ], Status.ERROR)
         self.assertEqual(stored.error_code, "PDF_MERGE_FAILED")
         self.assertEqual(stored.pdf_status, "ERROR")
+        self.assertNotIn("close_after_success", adapter.actions)
 
     def test_retry_merge_uses_archived_iq_without_resubmitting(self):
         class ArchivedIqManager(MockPdfResultManager):

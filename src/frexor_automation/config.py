@@ -16,6 +16,8 @@ class FrexorConfig:
     startup_timeout_seconds: int
     action_timeout_seconds: int
     ui_map_path: Path
+    close_after_success: bool
+    close_edge_after_success: bool
 
 
 @dataclass(frozen=True)
@@ -110,6 +112,8 @@ def load_config(path: str | Path) -> AppConfig:
                 startup_timeout_seconds=int(f["startup_timeout_seconds"]),
                 action_timeout_seconds=int(f["action_timeout_seconds"]),
                 ui_map_path=(base / f["ui_map_path"]).resolve(),
+                close_after_success=bool(f.get("close_after_success", False)),
+                close_edge_after_success=bool(f.get("close_edge_after_success", False)),
             ),
             sheets=SheetsConfig(
                 spreadsheet_id=s["spreadsheet_id"],

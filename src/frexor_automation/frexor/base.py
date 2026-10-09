@@ -36,3 +36,6 @@ class FrexorAdapter(ABC):
 
     @abstractmethod
     def recover_from_error(self) -> bool: ...
+
+    def close_after_success(self) -> None:
+        """Close UI applications after a fully successful job when configured."""

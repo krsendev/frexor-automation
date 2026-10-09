@@ -40,6 +40,16 @@ Copy-Item frexor_ui_map.toml "dist\Frexor Worker\frexor_ui_map.toml"
 
 Pastikan path pada `config.toml` tetap valid dari working directory baru. Gunakan absolute path untuk executable Frexor dan folder PDF.
 
+Untuk menutup Frexor dan Edge setelah hasil berhasil diunggah:
+
+```toml
+[frexor]
+close_after_success = true
+close_edge_after_success = true
+```
+
+Cleanup hanya berjalan pada job sukses. Pada kegagalan, aplikasi tetap terbuka agar dapat diperiksa.
+
 ## Tes Manual Sebelum Background
 
 ```powershell

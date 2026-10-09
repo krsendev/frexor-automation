@@ -99,6 +99,8 @@ Isi bagian `[pdf]` di `config.toml`:
 
 Automation mengambil snapshot pada folder modul sebelum submit. Hanya satu PDF baru atau berubah yang boleh muncul. Filename wajib mengikuti `Hasil <MODULE> <YYYY-MM-DD> <posisi> <nama>.pdf`. Lebih dari satu kandidat atau filename yang tidak cocok menghasilkan `PDF_ASSOCIATION_FAILED`.
 
+Untuk VM khusus automation, set `close_after_success = true` dan `close_edge_after_success = true` pada bagian `[frexor]`. Setelah job sukses, upload selesai, dan status tersimpan, worker menutup window Edge secara graceful lalu menutup Frexor. Pada job gagal aplikasi tetap terbuka untuk pemeriksaan.
+
 ## Perintah
 
 ```powershell

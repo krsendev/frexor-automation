@@ -103,6 +103,12 @@ class Orchestrator:
                 self.logger.warning("Batch stopped after participant error: %s", participant.participant_id)
                 break
         self.batch_progress(summary, "")
+        if summary.success > 0 and summary.failed == 0 and not self.stop_requested.is_set():
+            try:
+                self.adapter.close_after_success()
+                self.logger.info("APPLICATION_CLEANUP completed after successful batch")
+            except Exception as exc:
+                self.logger.warning("APPLICATION_CLEANUP failed: %s", exc)
         return summary
 
     def _persist(
