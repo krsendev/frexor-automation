@@ -13,8 +13,7 @@ if (-not (Test-Path ".venv\Scripts\python.exe")) {
 
 $OutputDirectory = Join-Path $ProjectRoot "dist\Frexor Worker"
 Copy-Item "config.example.toml" (Join-Path $OutputDirectory "config.example.toml") -Force
-Copy-Item ".env.example" (Join-Path $OutputDirectory ".env.example") -Force
 Copy-Item "frexor_ui_map.example.toml" (Join-Path $OutputDirectory "frexor_ui_map.example.toml") -Force
 
 Write-Host "Build selesai: $OutputDirectory\Frexor Worker.exe"
-Write-Host "Salin .env, config.toml, dan frexor_ui_map.toml yang sudah valid ke folder tersebut."
+Write-Host "Salin config.toml dan frexor_ui_map.toml yang sudah valid ke folder tersebut."

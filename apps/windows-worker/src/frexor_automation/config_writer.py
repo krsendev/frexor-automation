@@ -19,11 +19,6 @@ def write_config(
     api_base_url: str = "",
     api_token: str = "",
 ) -> None:
-    if api_token.strip():
-        (path.parent / ".env").write_text(
-            f"FREXOR_WORKER_TOKEN={api_token.strip()}\n",
-            encoding="utf-8",
-        )
     ui_map = path.parent / "frexor_ui_map.toml"
     if not ui_map.exists():
         example = path.parent / "frexor_ui_map.example.toml"
@@ -101,6 +96,7 @@ iq_sheet = "IQ"
 
 [api]
 base_url = {_quoted(api_base_url)}
+token = {_quoted(api_token)}
 timeout_seconds = 30
 worker_id = "frexor-vm-01"
 poll_interval_seconds = 5

@@ -175,6 +175,7 @@ close_edge_after_success = true
 
 [api]
 base_url = "http://127.0.0.1:8000"
+token = "<token-worker-yang-sama-dengan-server>"
 timeout_seconds = 30
 worker_id = "frexor-vm-01"
 poll_interval_seconds = 5
@@ -197,14 +198,6 @@ IQ = "IQ"
 level = "INFO"
 directory = "C:\\FrexorPlatform\\data\\logs\\worker"
 ```
-
-Buat `C:\FrexorPlatform\runtime\worker\.env` dan gunakan nilai yang sama dengan `FREXOR_WORKER_TOKEN` pada server:
-
-```env
-FREXOR_WORKER_TOKEN=<token-worker-yang-sama-dengan-server>
-```
-
-Token worker tidak disimpan di `config.toml`. File `.env` tidak boleh masuk Git dan akses filesystem-nya harus dibatasi ke akun automation serta administrator.
 
 Salin UI map yang sudah terbukti bekerja:
 

@@ -55,15 +55,14 @@ Frontend tidak boleh menyimpan `FREXOR_WORKER_TOKEN`. Frontend atau backend form
 
 1. Masuk ke `apps\windows-worker`, lalu install dengan `py -m pip install -e .`.
 2. Salin `apps\windows-worker\config.example.toml` menjadi `config.toml`.
-3. Atur `data_source.type = "api"`, adapter `windows`, URL API, worker ID, dan folder PDF pada `config.toml`.
-4. Buat `.env` di sebelah `config.toml` dengan `FREXOR_WORKER_TOKEN=<worker-token>`.
-5. Jalankan manual terlebih dahulu:
+3. Atur `data_source.type = "api"`, adapter `windows`, URL API, worker token, worker ID, dan folder PDF.
+4. Jalankan manual terlebih dahulu:
 
    ```powershell
    powershell -ExecutionPolicy Bypass -File apps\windows-worker\scripts\run_worker.ps1
    ```
 
-6. Setelah dummy nyata lulus, build dan pasang executable background sesuai `docs/WINDOWS_BACKGROUND_WORKER.md`. Task Scheduler berjalan **saat operator login**, bukan saat boot. UI Automation membutuhkan desktop interaktif dan sesi Windows yang tidak terkunci.
+5. Setelah dummy nyata lulus, build dan pasang executable background sesuai `docs/WINDOWS_BACKGROUND_WORKER.md`. Task Scheduler berjalan **saat operator login**, bukan saat boot. UI Automation membutuhkan desktop interaktif dan sesi Windows yang tidak terkunci.
 
 ## Kontrak Frontend
 
