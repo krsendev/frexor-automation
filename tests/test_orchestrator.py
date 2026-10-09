@@ -62,6 +62,10 @@ class OrchestratorTests(unittest.TestCase):
 
         stored = repository.participants["P001"]
         self.assertEqual(pdf_manager.actions.count("merge:P001"), 1)
+        self.assertEqual(
+            len([action for action in pdf_manager.actions if action.startswith("prepare:P001:")]),
+            3,
+        )
         self.assertEqual(adapter.actions.count("close_after_success"), 1)
         self.assertEqual(
             stored.pdf_path,

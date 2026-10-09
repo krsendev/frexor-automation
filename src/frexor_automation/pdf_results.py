@@ -52,6 +52,29 @@ class PdfResultManager:
         self._validate(destination)
         return destination.resolve()
 
+    def prepare_for_submission(
+        self, participant: Participant, module: Module
+    ) -> Path | None:
+        source = self._expected_source(participant, module)
+        if not source.exists():
+            return None
+
+        archive_directory = (
+            self.config.output_directory
+            / "_source_collisions"
+            / self._safe_name(f"{participant.participant_id}_{participant.name}")
+            / module.value
+        )
+        archive_directory.mkdir(parents=True, exist_ok=True)
+        archive = archive_directory / f"{uuid4().hex}_{source.name}"
+        try:
+            shutil.move(str(source), str(archive))
+        except OSError as exc:
+            raise PdfAssociationError(
+                f"Existing Frexor PDF could not be moved before submit: {source}"
+            ) from exc
+        return archive.resolve()
+
     def merge_results(self, participant: Participant) -> Path:
         sources = [self._destination(participant, module) for module in Module]
         for source in sources:
@@ -157,6 +180,17 @@ class PdfResultManager:
             raise PdfInvalidError(f"PDF directory mapping is missing for {module}")
         return self.config.base_directory / folder
 
+    def _expected_source(self, participant: Participant, module: Module) -> Path:
+        if participant.test_date is None:
+            raise PdfAssociationError(
+                f"Participant test_date is missing for {participant.participant_id}"
+            )
+        filename = (
+            f"Hasil {module.value} {participant.test_date.isoformat()} "
+            f"{frexor_identity(participant.position)} {frexor_identity(participant.name)}.pdf"
+        )
+        return self._watch_directory(module) / filename
+
     def _validate_association(self, path: Path, participant: Participant, module: Module) -> None:
         if participant.test_date is None:
             raise PdfAssociationError(
@@ -230,6 +264,10 @@ class MockPdfResultManager:
 
     def existing_result(self, participant: Participant, module: Module) -> Path | None:
         self.actions.append(f"existing:{participant.participant_id}:{module}")
+        return None
+
+    def prepare_for_submission(self, participant: Participant, module: Module) -> Path | None:
+        self.actions.append(f"prepare:{participant.participant_id}:{module}")
         return None
 
     def merge_results(self, participant: Participant) -> Path:

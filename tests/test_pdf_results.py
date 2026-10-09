@@ -108,6 +108,22 @@ class PdfResultTests(unittest.TestCase):
 
             manager._validate_association(path, participant, Module.DISC)
 
+    def test_moves_existing_same_name_source_before_submission(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manager = self.manager(root)
+            participant = Participant("P002", "Andi", "Ops", test_date=date.today())
+            source = manager._expected_source(participant, Module.DISC)
+            source.write_bytes(VALID_PDF)
+
+            archived = manager.prepare_for_submission(participant, Module.DISC)
+
+            self.assertIsNotNone(archived)
+            self.assertFalse(source.exists())
+            self.assertTrue(archived.exists())
+            self.assertEqual(archived.read_bytes(), VALID_PDF)
+            self.assertIn("_source_collisions", archived.parts)
+
     def test_merges_results_in_disc_vak_iq_order_and_preserves_sources(self):
         with tempfile.TemporaryDirectory() as directory:
             manager = self.manager(Path(directory))

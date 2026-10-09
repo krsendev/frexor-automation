@@ -250,6 +250,14 @@ class Orchestrator:
                 self.logger.info(
                     "%s %s input question=%s", participant.participant_id, module, answer.question_no
                 )
+        replaced = self.pdf_manager.prepare_for_submission(participant, module)
+        if replaced is not None:
+            self.logger.warning(
+                "%s %s existing source PDF moved before submit path=%s",
+                participant.participant_id,
+                module,
+                replaced,
+            )
         pdf_before: Snapshot = self.pdf_manager.snapshot(module)
         self.adapter.submit(module)
         self.logger.info("%s %s submit clicked", participant.participant_id, module)
