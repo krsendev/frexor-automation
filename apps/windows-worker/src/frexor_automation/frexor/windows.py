@@ -231,14 +231,20 @@ class WindowsFrexorAdapter(FrexorAdapter):
         )
 
     def _set_indexed_text(self, index: int, value: str) -> None:
-        current_edits = self._descendants("Edit")
-        if index >= len(current_edits):
-            raise UnsafeUiStateError(
-                f"Frexor Edit index {index} is unavailable; found {len(current_edits)} fields"
-            )
-        current_value = self._control_value(current_edits[index]).strip().upper()
-        if current_value == value.strip().upper():
-            return
+        expected = value.strip().upper()
+        settle_deadline = time.monotonic() + 0.75
+        while True:
+            current_edits = self._descendants("Edit")
+            if index >= len(current_edits):
+                raise UnsafeUiStateError(
+                    f"Frexor Edit index {index} is unavailable; found {len(current_edits)} fields"
+                )
+            current_value = self._control_value(current_edits[index]).strip().upper()
+            if current_value == expected:
+                return
+            if current_value or time.monotonic() >= settle_deadline:
+                break
+            time.sleep(0.1)
 
         last_error: Exception | None = None
         for _ in range(3):
@@ -288,13 +294,19 @@ class WindowsFrexorAdapter(FrexorAdapter):
 
     @staticmethod
     def _control_value(control) -> str:
-        try:
-            return str(control.get_value())
-        except Exception:
+        readers = (
+            lambda: control.get_value(),
+            lambda: control.iface_value.CurrentValue,
+            lambda: control.window_text(),
+        )
+        for reader in readers:
             try:
-                return str(control.iface_value.CurrentValue)
+                value = str(reader())
             except Exception:
-                return ""
+                continue
+            if value.strip():
+                return value
+        return ""
 
     def _answer_control(self, module: Module, question_no: int, offset: int = 0):
         if self.current_module is not module:

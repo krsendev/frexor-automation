@@ -95,6 +95,23 @@ class FakeExistingValueWindow:
         return [self.edit] if control_type == "Edit" else []
 
 
+class FakeWindowTextEdit(FakeEdit):
+    def __init__(self, value):
+        super().__init__()
+        self.visible_value = value
+        self.write_attempts = 0
+
+    def set_edit_text(self, value):
+        self.write_attempts += 1
+        self.visible_value = value
+
+    def get_value(self):
+        return ""
+
+    def window_text(self):
+        return self.visible_value
+
+
 class FakeControl:
     def __init__(self, text, value=None, callback=None):
         self.text = text
@@ -235,6 +252,17 @@ class WindowsAdapterTests(unittest.TestCase):
         adapter._set_indexed_text(0, "Nama Peserta")
 
         self.assertEqual(adapter.window.write_attempts, 0)
+
+    def test_identity_uses_window_text_when_javafx_value_is_empty(self):
+        adapter = self.adapter()
+        edit = FakeWindowTextEdit("Nama Peserta")
+        adapter.window = SimpleNamespace(
+            descendants=lambda control_type: [edit] if control_type == "Edit" else []
+        )
+
+        adapter._set_indexed_text(0, "Nama Peserta")
+
+        self.assertEqual(edit.write_attempts, 0)
 
     def test_disc_pair_warning_is_closed(self):
         adapter = self.adapter()
