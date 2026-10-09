@@ -32,13 +32,8 @@ $Principal = New-ScheduledTaskPrincipal `
     -LogonType Interactive `
     -RunLevel Limited
 $Settings = New-ScheduledTaskSettingsSet `
-    -AllowStartIfOnBatteries `
-    -DontStopIfGoingOnBatteries `
     -ExecutionTimeLimit ([TimeSpan]::Zero) `
-    -Hidden `
     -MultipleInstances IgnoreNew `
-    -RestartCount 999 `
-    -RestartInterval (New-TimeSpan -Minutes 1) `
     -StartWhenAvailable
 
 Register-ScheduledTask `
@@ -52,4 +47,5 @@ Register-ScheduledTask `
 
 Start-ScheduledTask -TaskName $TaskName
 Write-Host "Task '$TaskName' terpasang dan dijalankan untuk user $CurrentUser."
+Write-Host "Launcher akan mencoba ulang setelah 60 detik jika worker berhenti karena error."
 Write-Host "Log worker: $WorkerDirectory\logs\automation.log"

@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 import sys
+import time
 
 from frexor_automation.cli import main
 
@@ -33,4 +34,9 @@ if __name__ == "__main__":
     arguments = sys.argv[1:]
     if not arguments:
         arguments = ["--config", str(default_config_path()), "worker"]
-    raise SystemExit(main(arguments))
+    while True:
+        exit_code = main(arguments)
+        if exit_code == 0 or "worker" not in arguments:
+            raise SystemExit(exit_code)
+        print(f"Worker berhenti dengan exit code {exit_code}; restart dalam 60 detik.")
+        time.sleep(60)

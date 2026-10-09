@@ -83,7 +83,7 @@ Installer membuat task `Frexor Automation Worker` dengan aturan:
 - `Interactive` logon type;
 - hidden;
 - berjalan tanpa execution time limit;
-- restart setelah satu menit jika proses keluar;
+- launcher mencoba menjalankan ulang worker setelah satu menit jika terjadi error terkontrol;
 - instance baru diabaikan jika worker masih hidup;
 - langsung dijalankan setelah instalasi.
 
@@ -118,8 +118,8 @@ powershell -ExecutionPolicy Bypass -File scripts\uninstall_worker_task.ps1
 5. Pastikan Frexor memproses DISC, VAK, IQ.
 6. Pastikan merged PDF dibuat dan diunggah.
 7. Pastikan job `DONE` dan result dapat diunduh.
-8. Tutup proses worker melalui Task Manager; task harus memulai ulang sekitar satu menit.
-9. Pastikan restart tidak membuat dua worker.
+8. Simulasikan API sementara tidak tersedia; launcher harus mencoba ulang sekitar satu menit.
+9. Pastikan retry tidak membuat dua worker.
 
 ## VM Reboot
 
