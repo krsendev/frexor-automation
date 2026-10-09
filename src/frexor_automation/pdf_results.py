@@ -5,10 +5,11 @@ from pathlib import Path
 import re
 import shutil
 import time
+from uuid import uuid4
 
 from .config import PdfConfig
 from .domain import Module, Participant, frexor_identity
-from .errors import PdfAssociationError, PdfInvalidError, PdfTimeoutError
+from .errors import PdfAssociationError, PdfInvalidError, PdfMergeError, PdfTimeoutError
 
 
 @dataclass(frozen=True)
@@ -50,6 +51,54 @@ class PdfResultManager:
             return None
         self._validate(destination)
         return destination.resolve()
+
+    def merge_results(self, participant: Participant) -> Path:
+        sources = [self._destination(participant, module) for module in Module]
+        for source in sources:
+            if not source.exists():
+                raise PdfMergeError(f"PDF source for merge not found: {source}")
+            try:
+                self._validate(source)
+            except PdfInvalidError as exc:
+                raise PdfMergeError(f"Invalid PDF source for merge: {source}") from exc
+
+        destination = self._merged_destination(participant)
+        if destination.exists():
+            try:
+                self._validate_merged(destination, sources)
+            except (PdfInvalidError, PdfMergeError) as exc:
+                raise PdfMergeError(f"Existing merged PDF is invalid: {destination}") from exc
+            return destination.resolve()
+
+        try:
+            from pypdf import PdfReader, PdfWriter
+        except ImportError as exc:
+            raise PdfMergeError("Install worker dependencies to merge PDF results") from exc
+
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        temporary = destination.with_name(
+            f".{destination.stem}.{uuid4().hex}.tmp.pdf"
+        )
+        writer = PdfWriter()
+        try:
+            for source in sources:
+                reader = PdfReader(source)
+                if reader.is_encrypted:
+                    raise PdfMergeError(f"Encrypted PDF cannot be merged: {source}")
+                if not reader.pages:
+                    raise PdfMergeError(f"PDF has no pages: {source}")
+                writer.append(source, import_outline=False)
+            writer.write(temporary)
+            self._validate_merged(temporary, sources)
+            temporary.replace(destination)
+            return destination.resolve()
+        except PdfMergeError:
+            raise
+        except Exception as exc:
+            raise PdfMergeError(f"Failed to merge PDF results: {exc}") from exc
+        finally:
+            writer.close()
+            temporary.unlink(missing_ok=True)
 
     def wait_for_result(
         self, before: Snapshot, participant: Participant, module: Module
@@ -129,6 +178,31 @@ class PdfResultManager:
         )
         return participant_dir / f"{module.value}.pdf"
 
+    def _merged_destination(self, participant: Participant) -> Path:
+        if participant.test_date is None:
+            raise PdfMergeError(
+                f"Participant test_date is missing for {participant.participant_id}"
+            )
+        filename = (
+            f"Hasil Psikotes {participant.test_date.strftime('%d-%m-%Y')} "
+            f"{frexor_identity(participant.position)} {frexor_identity(participant.name)}.pdf"
+        )
+        return self._destination(participant, Module.DISC).parent / filename
+
+    def _validate_merged(self, path: Path, sources: list[Path]) -> None:
+        self._validate(path)
+        try:
+            from pypdf import PdfReader
+
+            expected_pages = sum(len(PdfReader(source).pages) for source in sources)
+            actual_pages = len(PdfReader(path).pages)
+        except Exception as exc:
+            raise PdfMergeError(f"Merged PDF cannot be read: {path}") from exc
+        if expected_pages <= 0 or actual_pages != expected_pages:
+            raise PdfMergeError(
+                f"Merged PDF page count mismatch: expected {expected_pages}, found {actual_pages}"
+            )
+
     @staticmethod
     def _safe_name(value: str) -> str:
         cleaned = re.sub(r"[^A-Za-z0-9._-]+", "_", value.strip())
@@ -157,3 +231,12 @@ class MockPdfResultManager:
     def existing_result(self, participant: Participant, module: Module) -> Path | None:
         self.actions.append(f"existing:{participant.participant_id}:{module}")
         return None
+
+    def merge_results(self, participant: Participant) -> Path:
+        self.actions.append(f"merge:{participant.participant_id}")
+        test_date = participant.test_date.strftime("%d-%m-%Y") if participant.test_date else "unknown-date"
+        filename = (
+            f"Hasil Psikotes {test_date} "
+            f"{frexor_identity(participant.position)} {frexor_identity(participant.name)}.pdf"
+        )
+        return Path(f"/mock/{participant.participant_id}/{filename}")

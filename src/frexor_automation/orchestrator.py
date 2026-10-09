@@ -131,14 +131,25 @@ class Orchestrator:
             participant.pdf_path = str(Path(existing).parent)
             next_statuses = dict(participant.module_statuses)
             next_statuses[module] = Status.DONE
-            participant.pdf_status = (
-                "VERIFIED" if set(next_statuses.values()) <= {Status.DONE, Status.SKIPPED} else "PARTIAL"
-            )
+            try:
+                if set(next_statuses.values()) <= {Status.DONE, Status.SKIPPED}:
+                    merged = self.pdf_manager.merge_results(participant)
+                    participant.pdf_path = str(merged)
+                    participant.pdf_status = "VERIFIED"
+                else:
+                    participant.pdf_status = "PARTIAL"
+            except Exception as exc:
+                code = getattr(exc, "code", "PDF_MERGE_FAILED")
+                self._set_error(participant, module, code, [str(exc)])
+                return
             self._persist(participant, module, Status.DONE)
             self.logger.info(
                 "%s %s recovered from archived PDF path=%s",
                 participant.participant_id, module, existing,
             )
+        if retry_errors:
+            if not self._recover_error_modules_with_archived_pdf(participant):
+                return
         participant_errors = validate_participant(participant)
         if participant_errors:
             self._mark_first_pending_error(participant, retry_errors, "PARTICIPANT_INVALID", participant_errors)
@@ -172,6 +183,42 @@ class Orchestrator:
                     "%s %s recovery=%s", participant.participant_id, module, recovered
                 )
                 return
+
+    def _recover_error_modules_with_archived_pdf(self, participant: Participant) -> bool:
+        for module in Module:
+            if participant.module_statuses[module] is not Status.ERROR:
+                continue
+            existing = self.pdf_manager.existing_result(participant, module)
+            if existing is None:
+                continue
+            self._persist(participant, module, Status.PROCESSING)
+            participant.pdf_path = str(Path(existing).parent)
+            next_statuses = dict(participant.module_statuses)
+            next_statuses[module] = Status.DONE
+            try:
+                if set(next_statuses.values()) <= {Status.DONE, Status.SKIPPED}:
+                    merged = self.pdf_manager.merge_results(participant)
+                    participant.pdf_path = str(merged)
+                    participant.pdf_status = "VERIFIED"
+                    self.logger.info(
+                        "%s merged PDF recovered path=%s",
+                        participant.participant_id,
+                        merged,
+                    )
+                else:
+                    participant.pdf_status = "PARTIAL"
+            except Exception as exc:
+                code = getattr(exc, "code", "PDF_MERGE_FAILED")
+                self._set_error(participant, module, code, [str(exc)])
+                return False
+            self._persist(participant, module, Status.DONE)
+            self.logger.info(
+                "%s %s recovered from archived PDF path=%s",
+                participant.participant_id,
+                module,
+                existing,
+            )
+        return True
 
     def _process_module(
         self, participant: Participant, module: Module,
@@ -224,12 +271,20 @@ class Orchestrator:
                     participant.participant_id,
                     module,
                 )
-        participant.pdf_path = str(Path(result).parent)
         next_statuses = dict(participant.module_statuses)
         next_statuses[module] = Status.DONE
-        participant.pdf_status = (
-            "VERIFIED" if set(next_statuses.values()) <= {Status.DONE, Status.SKIPPED} else "PARTIAL"
-        )
+        if set(next_statuses.values()) <= {Status.DONE, Status.SKIPPED}:
+            merged = self.pdf_manager.merge_results(participant)
+            participant.pdf_path = str(merged)
+            participant.pdf_status = "VERIFIED"
+            self.logger.info(
+                "%s merged PDF verified path=%s",
+                participant.participant_id,
+                merged,
+            )
+        else:
+            participant.pdf_path = str(Path(result).parent)
+            participant.pdf_status = "PARTIAL"
         self._persist(participant, module, Status.DONE)
         self.logger.info("%s %s DONE", participant.participant_id, module)
 

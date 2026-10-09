@@ -42,3 +42,7 @@ class PdfInvalidError(PdfError):
 
 class PdfAssociationError(PdfError):
     code = "PDF_ASSOCIATION_FAILED"
+
+
+class PdfMergeError(PdfError):
+    code = "PDF_MERGE_FAILED"

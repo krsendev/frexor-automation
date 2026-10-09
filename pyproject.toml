@@ -20,6 +20,7 @@ worker = [
   "google-api-python-client>=2.149,<3",
   "google-auth>=2.35,<3",
   "openpyxl>=3.1,<4",
+  "pypdf>=5.1,<7",
   "PySide6>=6.8,<7",
   "pywinauto>=0.6.9,<0.7; sys_platform == 'win32'",
   "pywin32>=308; sys_platform == 'win32'",

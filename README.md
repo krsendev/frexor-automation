@@ -1,5 +1,7 @@
 # Frexor Assessment Automation
 
+Dokumentasi project lengkap dimulai dari `docs/PROJECT_DOCUMENTATION_INDEX.md`. Requirement induk terbaru berada di `PRD/PRD_Frexor_Automation_Platform_v3.md`.
+
 Aplikasi Windows untuk memindahkan jawaban assessment dari Google Sheets, workbook Excel lokal, atau API ke Frexor secara sequential, tervalidasi, dapat dilanjutkan, dan dapat diaudit. Aplikasi tidak melakukan OCR, scoring, interpretasi, atau pembuatan jawaban.
 
 ## Cakupan yang sudah diimplementasikan
@@ -10,6 +12,7 @@ Aplikasi Windows untuk memindahkan jawaban assessment dari Google Sheets, workbo
 - Sumber data dapat dipilih antara Google Sheets, workbook Excel lokal, dan API; pilihan tersimpan dalam konfigurasi operator.
 - PDF hasil menjadi syarat `DONE`: file harus baru/berubah setelah submit, stabil, terbaca, berukuran minimum, dan memiliki struktur PDF dasar yang valid.
 - PDF diarsipkan tanpa overwrite ke `output/<participant_id>_<name>/<MODULE>.pdf`.
+- Setelah ketiga modul lengkap, PDF digabung atomik dalam urutan DISC, VAK, IQ menjadi `Hasil Psikotes <DD-MM-YYYY> <posisi> <nama>.pdf`; tiga file sumber tetap disimpan.
 - Retry request Google API memakai exponential backoff bawaan client dan batas `max_retries` dari konfigurasi.
 - Dry-run validation, batch processing, safe stop, retry error, dan resume tanpa mengulang modul `DONE`.
 - Submit baru ditandai `DONE` setelah adapter menemukan perubahan halaman dan PDF modul berhasil diverifikasi.
@@ -80,7 +83,7 @@ Webhook dan worker memakai bearer token yang berbeda. Token webhook hanya diguna
 
 Data sintetis untuk controlled integration test tersedia di `.test-data/dummy/`. Jangan gunakan fixture tersebut untuk interpretasi psikologis atau keputusan karyawan.
 
-`pdf_status` dimulai dari `PENDING`, berubah menjadi `PARTIAL` setelah sebagian hasil tersedia, `VERIFIED` setelah seluruh modul selesai, atau `ERROR` jika verifikasi PDF gagal. `pdf_path` menunjuk folder arsip peserta.
+`pdf_status` dimulai dari `PENDING`, berubah menjadi `PARTIAL` setelah sebagian hasil tersedia, `VERIFIED` setelah seluruh modul selesai dan hasil gabungan valid, atau `ERROR` jika verifikasi/merge PDF gagal. Setelah selesai, `pdf_path` menunjuk file `Hasil Psikotes <DD-MM-YYYY> <posisi> <nama>.pdf`.
 
 ## Konfigurasi PDF
 
