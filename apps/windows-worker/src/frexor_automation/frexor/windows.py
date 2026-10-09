@@ -70,8 +70,25 @@ class WindowsFrexorAdapter(FrexorAdapter):
         except Exception:
             self.app = Application(backend="uia").start(str(self.config.executable_path))
         self.window = self.app.window(**criteria)
+        self._activate_window()
         self.window.wait("visible enabled ready", timeout=self.config.startup_timeout_seconds)
         self._login_if_required()
+
+    def _activate_window(self) -> None:
+        if self.window is None:
+            raise FrexorError("Frexor is not connected")
+        try:
+            if self.window.is_minimized():
+                self.window.restore()
+        except Exception:
+            try:
+                self.window.restore()
+            except Exception:
+                pass
+        try:
+            self.window.set_focus()
+        except Exception:
+            pass
 
     def _login_if_required(self) -> None:
         login_buttons = [
@@ -82,14 +99,28 @@ class WindowsFrexorAdapter(FrexorAdapter):
             return
         if len(login_buttons) != 1:
             raise UnsafeUiStateError("Frexor LOG IN button was not uniquely identified")
+        self._activate_window()
         login_buttons[0].click_input()
         deadline = time.monotonic() + self.config.startup_timeout_seconds
+        retry_count = 0
+        next_retry = time.monotonic() + 1.0
         while time.monotonic() < deadline:
             try:
                 self._find_by_title("Attitude Test [DISC]", ("Button",))
                 return
             except UnsafeUiStateError:
-                time.sleep(0.25)
+                pass
+            if retry_count < 2 and time.monotonic() >= next_retry:
+                buttons = [
+                    control for control in self.window.descendants(control_type="Button")
+                    if control.is_visible() and control.window_text().strip() == "LOG IN"
+                ]
+                if len(buttons) == 1:
+                    self._activate_window()
+                    buttons[0].click_input()
+                    retry_count += 1
+                next_retry = time.monotonic() + 1.0
+            time.sleep(0.25)
         raise LoginRequiredError("Frexor did not reach the assessment menu after LOG IN")
 
     def _descendants(self, control_type: str) -> list:

@@ -178,12 +178,23 @@ class FakeMainWindow:
 class FakeLoginWindow:
     def __init__(self, values):
         self.logged_in = False
+        self.minimized = True
+        self.focused = False
         self.login = FakeControl("LOG IN", callback=self._complete_login)
         self.navigation = FakeControl("Attitude Test [DISC]")
         self.edits = [FakeControl("", value=value) for value in values]
 
     def _complete_login(self):
         self.logged_in = True
+
+    def is_minimized(self):
+        return self.minimized
+
+    def restore(self):
+        self.minimized = False
+
+    def set_focus(self):
+        self.focused = True
 
     def descendants(self, control_type):
         if control_type == "Edit":
@@ -332,6 +343,8 @@ class WindowsAdapterTests(unittest.TestCase):
         adapter.config = SimpleNamespace(startup_timeout_seconds=1)
         adapter._login_if_required()
         self.assertTrue(adapter.window.login.clicked)
+        self.assertFalse(adapter.window.minimized)
+        self.assertTrue(adapter.window.focused)
 
     def test_assessment_submenu_opens_data_entry_form(self):
         adapter = self.adapter()
