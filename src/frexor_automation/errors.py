@@ -46,3 +46,7 @@ class PdfAssociationError(PdfError):
 
 class PdfMergeError(PdfError):
     code = "PDF_MERGE_FAILED"
+
+
+class ResultUploadError(AutomationError):
+    code = "RESULT_UPLOAD_FAILED"

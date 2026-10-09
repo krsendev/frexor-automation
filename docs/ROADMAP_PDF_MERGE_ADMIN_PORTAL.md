@@ -44,7 +44,7 @@ Exit criteria:
 
 Status: implemented dan lulus automated tests. Pengujian batch nyata tetap diperlukan sebelum production.
 
-### Phase 2 - Server Upload
+### Phase 2 - Server Upload (Implemented)
 
 Endpoint proposed:
 
@@ -79,6 +79,8 @@ Exit criteria:
 - Network interruption dapat di-retry.
 - File tidak corrupt.
 - Duplicate upload tidak menggandakan data.
+
+Status: endpoint upload, checksum, atomic storage, metadata SQLite, dan download by job ID sudah implemented. Uji jaringan LAN nyata dan interruption masih diperlukan.
 
 ### Phase 3 - Result API
 

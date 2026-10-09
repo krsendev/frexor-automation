@@ -77,9 +77,11 @@ POST  /api/v1/worker/jobs/claim
 GET   /api/v1/worker/jobs/{job_id}/answers/{module}
 PATCH /api/v1/worker/jobs/{job_id}/modules/{module}
 POST  /api/v1/worker/jobs/{job_id}/heartbeat
+POST  /api/v1/worker/jobs/{job_id}/result
+GET   /api/v1/admin/jobs/{job_id}/result
 ```
 
-Webhook dan worker memakai bearer token yang berbeda. Token webhook hanya digunakan oleh backend frontend; jangan menaruh token tersebut di JavaScript browser.
+Webhook dan worker memakai bearer token yang berbeda. Endpoint upload memakai token worker. Endpoint download sementara memakai token webhook dan hanya boleh dipanggil backend web admin; jangan menaruh token tersebut di JavaScript browser.
 
 Data sintetis untuk controlled integration test tersedia di `.test-data/dummy/`. Jangan gunakan fixture tersebut untuk interpretasi psikologis atau keputusan karyawan.
 

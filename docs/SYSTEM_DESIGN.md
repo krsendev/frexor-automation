@@ -14,7 +14,7 @@ Website Form + Backend
       |
       | webhook JSON
       v
-Automation API Linux <------ Dashboard HR (PLANNED)
+Automation API Linux <------ Backend/Dashboard HR (PARTIAL)
 FastAPI + SQLite
       ^
       | claim / answers / status / heartbeat
@@ -32,7 +32,7 @@ Frexor + Edge PDF
 - FastAPI.
 - SQLite database.
 - systemd service.
-- Future result storage.
+- Result storage untuk merged PDF.
 - Future reverse proxy dan HTTPS.
 
 ### Windows VM
@@ -69,6 +69,7 @@ Responsibilities:
 - Heartbeat.
 - Expired lease recovery.
 - Read status.
+- Menerima upload merged PDF, menyimpan metadata/checksum, dan menyediakan download by job ID.
 
 ### 4.2 Worker Runtime
 
@@ -84,6 +85,7 @@ Responsibilities:
 - Mengendalikan Frexor.
 - Mendeteksi dan mengarsipkan PDF.
 - Mengirim status modul.
+- Menggabungkan PDF dan mengunggah hasil sebelum job menjadi `DONE`.
 
 ### 4.3 Website Integration
 
@@ -145,7 +147,7 @@ Worker memeriksa archive PDF untuk memulihkan modul tanpa submit ulang.
 
 Heartbeat berhenti. Lease akan expired. Job aktif tidak boleh langsung diproses worker lain jika sudah `PROCESSING`.
 
-## 8. Planned Result Pipeline
+## 8. Current Result Pipeline
 
 ```text
 DISC.pdf ----+
@@ -174,7 +176,7 @@ IQ.pdf ------+                                      |
 - Duplicate upload untuk checksum sama bersifat idempotent.
 - Checksum berbeda pada job yang sama ditolak dan membutuhkan review.
 
-## 9. Planned Server Storage
+## 9. Current Server Storage
 
 ```text
 /var/lib/frexor-automation/
@@ -186,9 +188,11 @@ IQ.pdf ------+                                      |
 
 Storage path tidak dikirim langsung kepada browser. Direktori dan file dibatasi dengan permission OS.
 
-## 10. Planned Dashboard Boundary
+## 10. Dashboard Boundary
 
 Dashboard menggunakan backend sendiri atau server-side routes. Browser tidak menerima worker/webhook token.
+
+Download by job ID sudah tersedia. List, filter, login, role, dan audit dashboard masih planned.
 
 Minimal views:
 

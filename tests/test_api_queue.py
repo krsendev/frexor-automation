@@ -1,4 +1,5 @@
 import os
+import hashlib
 from pathlib import Path
 import tempfile
 import unittest
@@ -9,7 +10,11 @@ os.environ.setdefault("FREXOR_WORKER_TOKEN", "test-worker-token")
 import httpx
 
 from frexor_api import database
+from frexor_api import main
 from frexor_api.main import app
+
+
+VALID_PDF = b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n"
 
 
 def assessment_payload(external_id: str) -> dict:
@@ -39,6 +44,7 @@ class ApiQueueTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         database.DATABASE_PATH = Path(self.temporary.name) / "queue.db"
+        main.RESULT_STORAGE_PATH = Path(self.temporary.name) / "results"
         database.initializeDatabase()
         self.client = httpx.AsyncClient(
             transport=httpx.ASGITransport(app=app),
@@ -92,6 +98,22 @@ class ApiQueueTests(unittest.IsolatedAsyncioTestCase):
                 json={"status": "PROCESSING"},
             )
             self.assertEqual(processing.status_code, 200)
+            if module == "IQ":
+                uploaded = await self.client.post(
+                    f"/api/v1/worker/jobs/{job_id}/result",
+                    headers=self.worker_headers,
+                    data={"sha256": hashlib.sha256(VALID_PDF).hexdigest()},
+                    files={"file": ("result.pdf", VALID_PDF, "application/pdf")},
+                )
+                self.assertEqual(uploaded.status_code, 201)
+                duplicate = await self.client.post(
+                    f"/api/v1/worker/jobs/{job_id}/result",
+                    headers=self.worker_headers,
+                    data={"sha256": hashlib.sha256(VALID_PDF).hexdigest()},
+                    files={"file": ("result.pdf", VALID_PDF, "application/pdf")},
+                )
+                self.assertEqual(duplicate.status_code, 200)
+                self.assertTrue(duplicate.json()["idempotent"])
             done = await self.client.patch(
                 f"/api/v1/worker/jobs/{job_id}/modules/{module}",
                 headers=self.worker_headers,
@@ -105,6 +127,55 @@ class ApiQueueTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(status.status_code, 200)
         self.assertEqual(status.json()["status"], "DONE")
+        self.assertTrue(status.json()["result"]["available"])
+
+        downloaded = await self.client.get(
+            f"/api/v1/admin/jobs/{job_id}/result",
+            headers=self.webhook_headers,
+        )
+        self.assertEqual(downloaded.status_code, 200)
+        self.assertEqual(downloaded.content, VALID_PDF)
+        self.assertIn(
+            "Hasil%20Psikotes%2008-10-2026%20Operator%20Dummy%20Participant.pdf",
+            downloaded.headers["content-disposition"],
+        )
+
+    async def test_final_module_cannot_finish_before_result_upload(self):
+        created = (await self.client.post(
+            "/api/v1/webhooks/assessments",
+            headers=self.webhook_headers,
+            json=assessment_payload("FORM-RESULT-REQUIRED"),
+        )).json()
+        job_id = created["job_id"]
+        await self.client.post(
+            "/api/v1/worker/jobs/claim",
+            headers={"Authorization": "Bearer test-worker-token"},
+            json={"worker_id": "worker-test-01"},
+        )
+        for module in ("DISC", "VAK"):
+            await self.client.patch(
+                f"/api/v1/worker/jobs/{job_id}/modules/{module}",
+                headers=self.worker_headers,
+                json={"status": "PROCESSING"},
+            )
+            await self.client.patch(
+                f"/api/v1/worker/jobs/{job_id}/modules/{module}",
+                headers=self.worker_headers,
+                json={"status": "DONE"},
+            )
+        await self.client.patch(
+            f"/api/v1/worker/jobs/{job_id}/modules/IQ",
+            headers=self.worker_headers,
+            json={"status": "PROCESSING"},
+        )
+
+        response = await self.client.patch(
+            f"/api/v1/worker/jobs/{job_id}/modules/IQ",
+            headers=self.worker_headers,
+            json={"status": "DONE"},
+        )
+
+        self.assertEqual(response.status_code, 409)
 
     async def test_heartbeat_rejects_webhook_token(self):
         created = (await self.client.post(

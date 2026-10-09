@@ -12,6 +12,7 @@
 
 - `PRD/PRD_Frexor_Automation_Platform_v3.md` - baseline terbaru.
 - `PRD/PRD_Website_Frexor_Webhook_Integration_v1.md` - integrasi backend website.
+- `PRD/PRD_Frexor_Admin_Backend_v1.md` - requirement backend web admin dan akses hasil.
 - `PRD/PRD_Frexor_Assessment_Automation_v1.md` - requirement awal.
 - `PRD/PRD_Frexor_Assessment_Automation_v2_Batch_PDF.md` - batch dan PDF baseline.
 - `PRD/PRD_DESIGN_Frexor_Desktop_Operator_v1.md` - desain desktop operator historis.
@@ -21,6 +22,7 @@
 
 - `docs/SYSTEM_DESIGN.md` - boundaries, sequence, queue, recovery, dan scaling.
 - `docs/API_CONTRACT.md` - endpoint dan autentikasi antar sistem.
+- `docs/ADMIN_BACKEND_INTEGRATION_DESIGN.md` - desain bahasa-agnostik untuk list/detail/download admin.
 - `docs/ARCHITECTURE_DECISIONS.md` - keputusan desain dan alasan.
 - `docs/DATA_AND_STATE_MODEL.md` - schema dan state machine.
 - `docs/FREXOR_UI_DISCOVERY.md` - UI Automation discovery.
@@ -42,6 +44,6 @@
 - Satu end-to-end normal flow berhasil.
 - Automated tests tersedia.
 - Batch besar dan failure scenarios belum seluruhnya diuji.
-- Merge PDF lokal sudah implemented dan diuji otomatis; upload result dan dashboard masih planned.
+- Merge dan upload PDF sudah implemented dan diuji otomatis; backend/dashboard admin selain download by job ID masih planned.
 
 Jika dokumen lama bertentangan dengan PRD v3, gunakan PRD v3 dan source code aktif sebagai acuan, lalu catat keputusan baru sebagai change request.

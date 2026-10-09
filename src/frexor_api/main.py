@@ -2,20 +2,29 @@ from collections import Counter
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import date, datetime, timedelta, timezone
+import hashlib
+from pathlib import Path
+import re
 from typing import Annotated, Literal, Self
+from urllib.parse import quote
 from uuid import uuid4
 
 from fastapi import (
   Depends,
+  File,
   FastAPI,
+  Form,
   Header,
   HTTPException,
   Response,
+  UploadFile,
   status,
 )
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, model_validator
 
 from .database import connect, initializeDatabase, transaction
+from .config import MAX_RESULT_BYTES, RESULT_STORAGE_PATH
 from .security import requireWebhookToken, requireWorkerToken
 
 @asynccontextmanager
@@ -38,6 +47,18 @@ def utcNow() -> str:
   return datetime.now(
     timezone.utc
   ).isoformat()
+
+def safeFilenameComponent(value: str) -> str:
+  cleaned = re.sub(r"[^A-Za-z0-9 ._-]+", "_", value.strip())
+  return cleaned.strip(" ._") or "participant"
+
+def expectedResultFilename(job) -> str:
+  testDate = date.fromisoformat(job["test_date"]).strftime("%d-%m-%Y")
+  return (
+    f"Hasil Psikotes {testDate} "
+    f"{safeFilenameComponent(job['position'])} "
+    f"{safeFilenameComponent(job['name'])}.pdf"
+  )
 
 class discAnswer(BaseModel):
   question_no: int = Field(ge=1, le=24)
@@ -352,6 +373,14 @@ def getJobStatus(
         jobId,
       )
     ).fetchall()
+    resultRow = connection.execute(
+      """
+      SELECT filename, sha256, size_bytes, uploaded_at
+      FROM result_files
+      WHERE job_id = ?
+      """,
+      (jobId,),
+    ).fetchone()
 
     modules = {
       row["module"]: {
@@ -378,6 +407,17 @@ def getJobStatus(
       "error_message": job["last_error"],
       "created_at": job["created_at"],
       "updated_at": job["updated_at"],
+      "result": (
+        {
+          "available": True,
+          "filename": resultRow["filename"],
+          "sha256": resultRow["sha256"],
+          "size_bytes": resultRow["size_bytes"],
+          "uploaded_at": resultRow["uploaded_at"],
+        }
+        if resultRow is not None
+        else {"available": False}
+      ),
       "modules": modules,
     }
   finally:
@@ -770,6 +810,27 @@ def updateModuleStatus(
         ),
       )
 
+    if requestedStatus == "DONE":
+      otherStatuses = connection.execute(
+        """
+        SELECT module, status
+        FROM module_runs
+        WHERE job_id = ? AND module <> ?
+        """,
+        (jobId, normalizeModule),
+      ).fetchall()
+      completesJob = all(row["status"] == "DONE" for row in otherStatuses)
+      if completesJob:
+        resultFile = connection.execute(
+          "SELECT job_id FROM result_files WHERE job_id = ?",
+          (jobId,),
+        ).fetchone()
+        if resultFile is None:
+          raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="PDF gabungan wajib diunggah sebelum job diselesaikan",
+          )
+
     attemptIncrement = (
       1
       if requestedStatus == "PROCESSING"
@@ -860,11 +921,6 @@ def updateModuleStatus(
         status = ?,
         error_code = ?,
         last_error = ?,
-        pdf_path = CASE
-          WHEN ? <> ''
-          THEN ?
-          ELSE pdf_path
-        END,
         lease_until = CASE
           WHEN ? IN ('DONE', 'FAILED')
           THEN NULL
@@ -877,8 +933,6 @@ def updateModuleStatus(
         jobStatus,
         errorCode,
         errorMessage,
-        pdfPath,
-        pdfPath,
         jobStatus,
         now,
         jobId,
@@ -892,6 +946,136 @@ def updateModuleStatus(
       "job_status": jobStatus,
       "idempotent": False,
     }
+
+async def saveResultFile(
+  jobId: str,
+  workerId: str,
+  upload: UploadFile,
+  claimedSha256: str,
+) -> dict:
+  normalizedSha256 = claimedSha256.strip().lower()
+  if not re.fullmatch(r"[0-9a-f]{64}", normalizedSha256):
+    raise HTTPException(
+      status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+      detail="sha256 harus berisi 64 karakter hexadecimal",
+    )
+  if upload.content_type not in {"application/pdf", "application/octet-stream"}:
+    raise HTTPException(
+      status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+      detail="File result harus berformat PDF",
+    )
+
+  connection = connect()
+  try:
+    job = connection.execute(
+      """
+      SELECT id, name, position, test_date, worker_id, status
+      FROM jobs
+      WHERE id = ?
+      """,
+      (jobId,),
+    ).fetchone()
+    if job is None:
+      raise HTTPException(status_code=404, detail="Job tidak ditemukan")
+    if job["worker_id"] != workerId:
+      raise HTTPException(status_code=409, detail="Job diklaim oleh worker lain")
+    if job["status"] not in {"CLAIMED", "PROCESSING"}:
+      raise HTTPException(status_code=409, detail="Status job tidak mengizinkan upload result")
+    moduleStatuses = {
+      row["module"]: row["status"]
+      for row in connection.execute(
+        "SELECT module, status FROM module_runs WHERE job_id = ?",
+        (jobId,),
+      ).fetchall()
+    }
+    if moduleStatuses != {"DISC": "DONE", "VAK": "DONE", "IQ": "PROCESSING"}:
+      raise HTTPException(
+        status_code=409,
+        detail="Result hanya dapat diunggah setelah DISC dan VAK DONE serta IQ PROCESSING",
+      )
+    existing = connection.execute(
+      "SELECT filename, storage_path, sha256, size_bytes FROM result_files WHERE job_id = ?",
+      (jobId,),
+    ).fetchone()
+    if existing is not None:
+      existingPath = Path(existing["storage_path"])
+      if existing["sha256"] == normalizedSha256 and existingPath.is_file():
+        return {
+          "job_id": jobId,
+          "filename": existing["filename"],
+          "sha256": existing["sha256"],
+          "size_bytes": existing["size_bytes"],
+          "idempotent": True,
+        }
+      raise HTTPException(status_code=409, detail="Result job sudah ada dengan checksum berbeda")
+    filename = expectedResultFilename(job)
+  finally:
+    connection.close()
+
+  destinationDirectory = RESULT_STORAGE_PATH / jobId
+  destinationDirectory.mkdir(parents=True, exist_ok=True)
+  destination = destinationDirectory / filename
+  temporary = destinationDirectory / f".{uuid4().hex}.upload"
+  digest = hashlib.sha256()
+  sizeBytes = 0
+  try:
+    with temporary.open("wb") as handle:
+      while chunk := await upload.read(1024 * 1024):
+        sizeBytes += len(chunk)
+        if sizeBytes > MAX_RESULT_BYTES:
+          raise HTTPException(status_code=413, detail="Ukuran PDF result melebihi batas")
+        digest.update(chunk)
+        handle.write(chunk)
+    if sizeBytes < 8:
+      raise HTTPException(status_code=422, detail="PDF result kosong atau terlalu kecil")
+    with temporary.open("rb") as handle:
+      if handle.read(5) != b"%PDF-":
+        raise HTTPException(status_code=422, detail="Header PDF result tidak valid")
+      handle.seek(-min(sizeBytes, 1024), 2)
+      if b"%%EOF" not in handle.read():
+        raise HTTPException(status_code=422, detail="Trailer PDF result tidak valid")
+    actualSha256 = digest.hexdigest()
+    if actualSha256 != normalizedSha256:
+      raise HTTPException(status_code=422, detail="Checksum PDF result tidak cocok")
+    temporary.replace(destination)
+    with transaction() as connection:
+      connection.execute(
+        """
+        INSERT INTO result_files (
+          job_id, filename, storage_path, sha256, size_bytes, uploaded_at
+        ) VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (jobId, filename, str(destination), actualSha256, sizeBytes, utcNow()),
+      )
+      connection.execute(
+        "UPDATE jobs SET pdf_path = ?, updated_at = ? WHERE id = ?",
+        (str(destination), utcNow(), jobId),
+      )
+    return {
+      "job_id": jobId,
+      "filename": filename,
+      "sha256": actualSha256,
+      "size_bytes": sizeBytes,
+      "idempotent": False,
+    }
+  finally:
+    temporary.unlink(missing_ok=True)
+
+def getResultFile(jobId: str):
+  connection = connect()
+  try:
+    row = connection.execute(
+      "SELECT filename, storage_path FROM result_files WHERE job_id = ?",
+      (jobId,),
+    ).fetchone()
+    if row is None:
+      raise HTTPException(status_code=404, detail="Result PDF belum tersedia")
+    path = Path(row["storage_path"])
+    if not path.is_file():
+      raise HTTPException(status_code=404, detail="File result tidak ditemukan di storage")
+    return path, row["filename"]
+  finally:
+    connection.close()
 
 def heartbeatJob(
   jobId: str,
@@ -1137,3 +1321,41 @@ async def heartbeatWorkerJob(
   ],
 ) -> dict:
   return heartbeatJob(jobId=jobId, workerId=workerId)
+
+@app.post(
+  "/api/v1/worker/jobs/{jobId}/result",
+  status_code=status.HTTP_201_CREATED,
+)
+async def uploadWorkerResult(
+  jobId: str,
+  file: Annotated[UploadFile, File()],
+  sha256: Annotated[str, Form()],
+  workerId: Annotated[
+    str,
+    Header(alias="X-Worker-ID", min_length=1, max_length=100),
+  ],
+  response: Response,
+  _: Annotated[None, Depends(requireWorkerToken)],
+) -> dict:
+  result = await saveResultFile(jobId, workerId, file, sha256)
+  if result["idempotent"]:
+    response.status_code = status.HTTP_200_OK
+  return result
+
+@app.get("/api/v1/admin/jobs/{jobId}/result")
+async def downloadAdminResult(
+  jobId: str,
+  _: Annotated[None, Depends(requireWebhookToken)],
+) -> StreamingResponse:
+  path, filename = getResultFile(jobId)
+  async def chunks():
+    with path.open("rb") as handle:
+      while chunk := handle.read(64 * 1024):
+        yield chunk
+  return StreamingResponse(
+    chunks(),
+    media_type="application/pdf",
+    headers={
+      "Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}",
+    },
+  )

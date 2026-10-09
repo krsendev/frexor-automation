@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from copy import deepcopy
 from datetime import date, datetime, timezone
+import hashlib
 import os
 from pathlib import Path
 import shutil
@@ -12,7 +13,7 @@ from typing import Any
 
 from .config import ApiConfig, ExcelConfig, SheetsConfig
 from .domain import ChoiceAnswer, DiscAnswer, Module, Participant, Status
-from .errors import ConfigurationError
+from .errors import ConfigurationError, ResultUploadError
 
 
 PARTICIPANT_HEADERS = [
@@ -379,6 +380,11 @@ class ApiRepository(AssessmentRepository):
 
     def update_module_status(self, participant, module, status, error_code="", error_message="") -> None:
         self._require_active_job(participant.participant_id)
+        if (
+            status is Status.DONE
+            and set(participant.module_statuses.values()) <= {Status.DONE, Status.SKIPPED}
+        ):
+            self._upload_result(participant)
         response = self.client.patch(
             f"/api/v1/worker/jobs/{participant.participant_id}/modules/{module.value}",
             headers=self._worker_headers(),
@@ -392,6 +398,26 @@ class ApiRepository(AssessmentRepository):
         response.raise_for_status()
         if response.json().get("job_status") in {"DONE", "FAILED", "REVIEW_REQUIRED"}:
             self._finish_active_job()
+
+    def _upload_result(self, participant: Participant) -> None:
+        result_path = Path(participant.pdf_path)
+        if not result_path.is_file():
+            raise ResultUploadError(f"Merged PDF not found: {result_path}")
+        digest = hashlib.sha256()
+        with result_path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+            handle.seek(0)
+            response = self.client.post(
+                f"/api/v1/worker/jobs/{participant.participant_id}/result",
+                headers=self._worker_headers(),
+                data={"sha256": digest.hexdigest()},
+                files={"file": (result_path.name, handle, "application/pdf")},
+            )
+        if response.is_error:
+            raise ResultUploadError(
+                f"Result upload rejected ({response.status_code}): {response.text[:500]}"
+            )
 
     def _require_active_job(self, participant_id: str) -> None:
         if participant_id != self._active_job_id:

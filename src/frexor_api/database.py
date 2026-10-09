@@ -121,6 +121,19 @@ CREATE TABLE IF NOT EXISTS module_runs (
     ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS result_files (
+  job_id TEXT PRIMARY KEY,
+  filename TEXT NOT NULL,
+  storage_path TEXT NOT NULL,
+  sha256 TEXT NOT NULL,
+  size_bytes INTEGER NOT NULL,
+  uploaded_at TEXT NOT NULL,
+
+  FOREIGN KEY (job_id)
+    REFERENCES jobs(id)
+    ON DELETE CASCADE
+);
+
 CREATE INDEX IF NOT EXISTS idx_jobs_queue
 ON jobs (
   status,

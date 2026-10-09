@@ -303,7 +303,7 @@ Status result dibuat terpisah agar kegagalan merge/upload tidak mengubah fakta b
 | Backup dan restore | Backup script diuji, restore operasional belum |
 | Task Scheduler/systemd | Belum dinyatakan lulus |
 | Merge PDF | Implemented; automated tests lulus, batch nyata belum diuji |
-| Upload PDF server | Belum dibuat |
+| Upload PDF server | Implemented; automated upload/download test lulus |
 | Dashboard download | Belum dibuat |
 
 ## 14. Acceptance Criteria Release Saat Ini

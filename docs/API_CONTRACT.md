@@ -142,7 +142,7 @@ X-Worker-ID: frexor-vm-01
 
 Tidak memiliki request body.
 
-## 5. Planned Result Endpoints
+## 5. Result Endpoints
 
 ### Upload Merged Result
 
@@ -153,7 +153,14 @@ X-Worker-ID: frexor-vm-01
 Content-Type: multipart/form-data
 ```
 
-Status: `PLANNED`, belum tersedia pada code aktif.
+Form fields:
+
+```text
+file=<merged PDF>
+sha256=<64 lowercase hexadecimal characters>
+```
+
+Status: `CURRENT`. Upload hanya diterima dari worker pemilik job setelah DISC dan VAK `DONE` serta IQ `PROCESSING`. Upload checksum sama bersifat idempotent.
 
 ### Admin List
 
@@ -167,9 +174,10 @@ Status: `PLANNED`.
 
 ```http
 GET /api/v1/admin/jobs/{job_id}/result
+Authorization: Bearer <webhook-token>
 ```
 
-Status: `PLANNED`.
+Status: `CURRENT` untuk integrasi backend web admin. Token tidak boleh dikirim ke browser. Endpoint mengembalikan attachment PDF.
 
 ## 6. Error Body
 
